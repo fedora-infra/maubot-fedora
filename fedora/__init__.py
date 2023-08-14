@@ -23,6 +23,19 @@ class Fedora(Plugin):
         """
         return f"[{username}]({self.config['accounts_baseurl']}user/{username})"
 
+    def catch_generic_fasjson_errors(func):
+        def wrapper(self, *args, **kwargs):
+            if self.fasjsonclient is None:
+                # if the connection to FASJSON failed at plugin start, fasjsonclient will be None
+                return f"Sorry, I can not give you the required information. I failed to connect to FASJSON on startup"
+            try:
+                return func(self, *args, **kwargs)
+            except fasjson_client.errors.ClientSetupError as e:
+                # typically this happens after the plugin starts up and runs for a while i.e. kerb ticket expires
+                return f"Sorry, I can not give you the required information. I failed to connect to FASJSON: **{e}**"
+        return wrapper
+
+    @catch_generic_fasjson_errors
     def _get_person_by_username(self, username: str) -> Union[dict, str]:
         """looks up a user by the username"""
         try:
@@ -30,11 +43,9 @@ class Fedora(Plugin):
         except fasjson_client.errors.APIError as e:
             if e.code == 404:
                 return f"Sorry, but user '{username}' does not exist"
-            else:
-                return "Something blew up, please try again"
-
         return person
 
+    @catch_generic_fasjson_errors
     def _get_group_members(self, groupname: str) -> Union[list, str]:
         """looks up a group members by the groupname"""
         try:
@@ -42,11 +53,9 @@ class Fedora(Plugin):
         except fasjson_client.errors.APIError as e:
             if e.code == 404:
                 return f"Sorry, but group '{groupname}' does not exist"
-            else:
-                self.log.error(e)
-                return "Something blew up, please try again"
         return members
     
+    @catch_generic_fasjson_errors
     def _get_group_sponsors(self, groupname: str) -> Union[list, str]:
         """looks up a group sponsors by the groupname"""
         try:
@@ -54,9 +63,6 @@ class Fedora(Plugin):
         except fasjson_client.errors.APIError as e:
             if e.code == 404:
                 return f"Sorry, but group '{groupname}' does not exist"
-            else:
-                self.log.error(e)
-                return "Something blew up, please try again"
         return sponsors
 
 
@@ -68,6 +74,7 @@ class Fedora(Plugin):
                 url=self.config["fasjson_url"],
             )
         except fasjson_client.errors.ClientSetupError as e:
+            self.fasjsonclient = None
             self.log.error(
                 "Something went wrong setting up "
                 "fasjson client with error: %s" % e
