@@ -15,6 +15,7 @@ class Config(BaseProxyConfig):
         helper.copy("accounts_baseurl")
         helper.copy("botname")
 
+
 class Fedora(Plugin):
     def _userlink(self, username: str) -> str:
         """
@@ -33,6 +34,7 @@ class Fedora(Plugin):
             except fasjson_client.errors.ClientSetupError as e:
                 # typically this happens after the plugin starts up and runs for a while i.e. kerb ticket expires
                 return f"Sorry, I can not give you the required information. I failed to connect to FASJSON: **{e}**"
+
         return wrapper
 
     @catch_generic_fasjson_errors
@@ -54,17 +56,18 @@ class Fedora(Plugin):
             if e.code == 404:
                 return f"Sorry, but group '{groupname}' does not exist"
         return members
-    
+
     @catch_generic_fasjson_errors
     def _get_group_sponsors(self, groupname: str) -> Union[list, str]:
         """looks up a group sponsors by the groupname"""
         try:
-            sponsors = self.fasjsonclient.list_group_sponsors(groupname=groupname).result
+            sponsors = self.fasjsonclient.list_group_sponsors(
+                groupname=groupname
+            ).result
         except fasjson_client.errors.APIError as e:
             if e.code == 404:
                 return f"Sorry, but group '{groupname}' does not exist"
         return sponsors
-
 
     async def start(self) -> None:
         self.config.load_and_update()
@@ -76,8 +79,7 @@ class Fedora(Plugin):
         except fasjson_client.errors.ClientSetupError as e:
             self.fasjsonclient = None
             self.log.error(
-                "Something went wrong setting up "
-                "fasjson client with error: %s" % e
+                "Something went wrong setting up " "fasjson client with error: %s" % e
             )
 
     async def stop(self) -> None:
@@ -100,7 +102,7 @@ class Fedora(Plugin):
                     await evt.respond(f"{inspect.getdoc(commandobject.__mb_func__)}")
                     self.log.error(inspect.getmembers(commandobject))
                     return
-            
+
             await evt.respond(f"`{commandname}` is not a valid command")
             return
         else:
@@ -115,9 +117,11 @@ class Fedora(Plugin):
                             arguments = f"{arguments} <{argument.name}>"
                         else:
                             arguments = f"{arguments} [{argument.name}]"
-                    output = output+ f"`!{commandobject.__mb_name__} {arguments}`:: {commandobject.__mb_help__}      \n"
+                    output = (
+                        output
+                        + f"`!{commandobject.__mb_name__} {arguments}`:: {commandobject.__mb_help__}      \n"
+                    )
             await evt.respond(output)
-
 
     @command.new(help="bork bork bork and plugin version")
     async def swedish(self, evt: MessageEvent) -> None:
@@ -141,7 +145,9 @@ class Fedora(Plugin):
         `groupname`: (required) The name of the Fedora Accounts group
         """
         if not groupname:
-            await evt.respond("groupname argument is required. e.g. `!members designteam`")
+            await evt.respond(
+                "groupname argument is required. e.g. `!members designteam`"
+            )
             return
 
         members = self._get_group_members(groupname)
@@ -149,13 +155,17 @@ class Fedora(Plugin):
         if isinstance(members, str):
             await evt.respond(members)
         else:
-            await evt.respond(f"Members of {groupname}: {', '.join(self._userlink(m['username']) for m in members)}")
+            await evt.respond(
+                f"Members of {groupname}: {', '.join(self._userlink(m['username']) for m in members)}"
+            )
 
     @command.new(help="Return a list of owners of the specified group")
     @command.argument("groupname", pass_raw=True, required=True)
     async def sponsors(self, evt: MessageEvent, groupname: str) -> None:
         if not groupname:
-            await evt.respond("groupname argument is required. e.g. `!sponsors designteam`")
+            await evt.respond(
+                "groupname argument is required. e.g. `!sponsors designteam`"
+            )
             return
 
         sponsors = self._get_group_sponsors(groupname)
@@ -163,4 +173,6 @@ class Fedora(Plugin):
         if isinstance(sponsors, str):
             await evt.respond(sponsors)
         else:
-            await evt.respond(f"Sponsors of {groupname}: {', '.join(self._userlink(s['username']) for s in sponsors)}")
+            await evt.respond(
+                f"Sponsors of {groupname}: {', '.join(self._userlink(s['username']) for s in sponsors)}"
+            )
