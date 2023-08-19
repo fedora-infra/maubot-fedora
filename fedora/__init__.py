@@ -1,5 +1,6 @@
 from typing import Type, Union
 import inspect
+import re
 
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 
@@ -8,6 +9,8 @@ import fasjson_client
 from maubot import Plugin, MessageEvent
 from maubot.handlers import command, event
 
+
+NL = "      \n"
 
 class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
@@ -34,18 +37,76 @@ class Fedora(Plugin):
             except fasjson_client.errors.ClientSetupError as e:
                 # typically this happens after the plugin starts up and runs for a while i.e. kerb ticket expires
                 return f"Sorry, I can not give you the required information. I failed to connect to FASJSON: **{e}**"
+            #except fasjson_client.errors.APIError as e:
+                #return f"Sorry, I can not give you the required information. FASJSON returned API Error: **{e}**"
 
         return wrapper
-
+    
     @catch_generic_fasjson_errors
-    def _get_person_by_username(self, username: str) -> Union[dict, str]:
-        """looks up a user by the username"""
-        try:
-            person = self.fasjsonclient.get_user(username=username).result
-        except fasjson_client.errors.APIError as e:
-            if e.code == 404:
-                return f"Sorry, but user '{username}' does not exist"
-        return person
+    def _get_fasuser(self, username: str, evt: MessageEvent):
+        def _get_person_by_username(username: str) -> dict | str:
+            """looks up a user by the username"""
+            try:
+                person = self.fasjsonclient.get_user(username=username).result
+            except fasjson_client.errors.APIError as e:
+                if e.code == 404:
+                    return f"Sorry, but Fedora Accounts user '{username}' does not exist"
+            return person
+
+        def _get_users_by_matrix_id(username: str) -> Union[dict, str]:
+            """looks up a user by the matrix id"""
+            
+            # Fedora Accounts stores these strangly but this is to handle that
+            try:
+                matrix_username, matrix_server = re.findall(r'@(.*):(.*)',username)[0]
+            except ValueError or IndexError:
+                return f"Sorry, {username} does not look like a valid matrix user ID (e.g. @username:homeserver.com )"
+        
+            # if given a fedora.im address -- just look up the username as a FAS name
+            if matrix_server == "fedora.im":
+                return  _get_person_by_username(matrix_username)
+            
+            searchterm = f'matrix://{matrix_server}/{matrix_username}'
+            searchresult = self.fasjsonclient.search(ircnick__exact=searchterm).result
+
+            if len(searchresult) > 1:
+                names = f"{NL}".join(name for name in searchresult) 
+                return (f"{len(searchresult)} Fedora Accounts users have the {username} Matrix Account defined:{NL}"
+                        f"{names}")
+            elif len(searchresult) == 0:
+                return f"No Fedora Accounts users have the {username} Matrix Account defined"
+            
+            return searchresult[0]
+
+                
+        # if no username is supplied, we use the matrix id of the sender (e.g. "@dudemcpants:fedora.im")
+        if not username:
+            username = evt.sender
+
+        # check if the formatted message has mentions (ie the user has tab-completed on someones 
+        # name) in them
+        if evt.content.formatted_body:
+            # in element at least, when usernames are mentioned, they are formatted like:
+            # <a href="https://matrix.to/#/@zodbot:fedora.im">zodbot</a>
+            # here we check the formatted message and extract all the matrix user IDs
+            u = re.findall(r'href=[\'"]?http[s]?://matrix.to/#/([^\'" >]+)',evt.content.formatted_body)
+            if len(u) > 1:
+                return "Sorry, I can only look up one username at a time"
+            elif len(u) == 1: 
+                return _get_users_by_matrix_id(u[0])
+
+        usernames = username.split(" ")
+        if len(usernames) > 1:
+            return "Sorry, I can only look up one username at a time"
+        
+        # else check if the username given is a matrix id (@<username>:<server.com>) 
+        if re.search(r'@.*:.*',usernames[0]):
+            return _get_users_by_matrix_id(usernames[0])
+        
+        # finally, assume we were given a FAS / Fedora Account ID and use that
+        else:
+            return _get_person_by_username(usernames[0])
+
 
     @catch_generic_fasjson_errors
     def _get_group_members(self, groupname: str) -> Union[list, str]:
@@ -175,4 +236,17 @@ class Fedora(Plugin):
         else:
             await evt.respond(
                 f"Sponsors of {groupname}: {', '.join(self._userlink(s['username']) for s in sponsors)}"
+            )
+
+    @command.new(help="Return brief information about a Fedora user", aliases=['hi', 'hello', 'hello2'])
+    @command.argument("username", pass_raw=True, required=False)
+    async def hellomynameis(self, evt: MessageEvent, username: str) -> None:
+
+        user = self._get_fasuser(username, evt)
+        
+        if isinstance(user, str):
+            await evt.reply(user)
+        else:
+            await evt.reply(
+                f"{user['human_name']} ({user['username']}) \<{user['emails'][0]}\>"
             )
