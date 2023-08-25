@@ -380,3 +380,13 @@ class Fedora(Plugin):
         resp = "".join([x for x in [owners, admins, committers] if x != ""])
 
         await evt.reply(resp)
+
+    @command.new(help="Retrive a user's pronouns")
+    @command.argument("username", pass_raw=True, required=False)
+    async def pronouns(self, evt: MessageEvent, username: str) -> None:
+        # This returns a string when there is an error
+        user = self._get_fasuser(username, evt)
+        if isinstance(user, str):
+            await evt.reply(user)
+        else:
+            await evt.reply(' or '.join(user.get("pronouns") or []))
