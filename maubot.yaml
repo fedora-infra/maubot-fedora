@@ -34,6 +34,8 @@ extra_files:
 # List of dependencies
 dependencies:
 - fasjson-client
+- requests
+- pytz
 
 #soft_dependencies:
 #- bar>=0.1
