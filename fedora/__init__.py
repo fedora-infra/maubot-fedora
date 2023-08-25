@@ -274,7 +274,10 @@ class Fedora(Plugin):
         if isinstance(user, str):
             await evt.reply(user)
         else:
-            await evt.reply(f"{user['human_name']} ({user['username']})")
+            message = f"{user['human_name']} ({user['username']})"
+            if pronouns := user.get('pronouns'):
+                message += ' - ' + ' or '.join(pronouns)
+            await evt.reply(message)
 
     @command.new(
         help="Return brief information about a Fedora user.", aliases=ALIASES["user"]
