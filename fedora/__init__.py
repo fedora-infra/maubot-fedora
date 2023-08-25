@@ -325,7 +325,7 @@ class Fedora(Plugin):
         else:
             timezone_name = user["timezone"]
             if timezone_name is None:
-                irc.reply(
+                await evt.reply(
                     'User "%s" doesn\'t share their timezone' % user.get("username")
                 )
                 return
