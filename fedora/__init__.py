@@ -299,6 +299,7 @@ class Fedora(Plugin):
             await evt.reply(
                 f"User: {user.get('username')},{NL}"
                 f"Name: {user.get('human_name')},{NL}"
+                f"Pronouns: {' or '.join(user.get('pronouns') or [])},{NL}"
                 f"Creation: {user.get('creation')},{NL}"
                 f"Timezone: {user.get('timezone')},{NL}"
                 f"Locale: {user.get('locale')},{NL}"
