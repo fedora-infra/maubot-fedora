@@ -229,7 +229,10 @@ class Fedora(Plugin):
         if isinstance(members, str):
             await evt.respond(members)
         else:
-            await evt.respond(
+            if len(members) > 200:
+                await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
+            else:
+                await evt.respond(
                 f"Members of {groupname}: {', '.join(self._userlink(m['username']) for m in members)}"
             )
 
