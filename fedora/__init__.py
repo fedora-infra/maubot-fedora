@@ -176,7 +176,7 @@ class Fedora(Plugin):
                         output = f"{output}{NL}{NL}#### Aliases ####{NL}"
                         for alias in aliases:
                             output = f"{output}* `{alias}`{NL}"
-                    await evt.reply(output)
+                    await evt.respond(output)
                     return
 
             await evt.reply(f"`{commandname}` is not a valid command")
@@ -197,7 +197,7 @@ class Fedora(Plugin):
                         output
                         + f"`!{commandobject.__mb_name__} {arguments}`:: {commandobject.__mb_help__}      \n"
                     )
-            await evt.reply(output)
+            await evt.respond(output)
 
     @command.new(help="return information about this bot")
     async def version(self, evt: MessageEvent) -> None:
@@ -277,7 +277,7 @@ class Fedora(Plugin):
             message = f"{user['human_name']} ({user['username']})"
             if pronouns := user.get('pronouns'):
                 message += ' - ' + ' or '.join(pronouns)
-            await evt.reply(message)
+            await evt.respond(message)
 
     @command.new(
         help="Return brief information about a Fedora user.", aliases=ALIASES["user"]
@@ -299,7 +299,7 @@ class Fedora(Plugin):
         if isinstance(user, str):
             await evt.reply(user)
         else:
-            await evt.reply(
+            await evt.respond(
                 f"User: {user.get('username')},{NL}"
                 f"Name: {user.get('human_name')},{NL}"
                 f"Pronouns: {' or '.join(user.get('pronouns') or [])},{NL}"
@@ -341,7 +341,7 @@ class Fedora(Plugin):
                     % (user.get("username"), timezone_name)
                 )
                 return
-            await evt.reply(
+            await evt.respond(
                 'The current local time of "%s" is: "%s" (timezone: %s)'
                 % (user.get("username"), time.strftime("%H:%M"), timezone_name)
             )
@@ -379,4 +379,4 @@ class Fedora(Plugin):
 
         resp = "".join([x for x in [owners, admins, committers] if x != ""])
 
-        await evt.reply(resp)
+        await evt.respond(resp)
