@@ -24,6 +24,9 @@ class Config(BaseProxyConfig):
         helper.copy("accounts_baseurl")
         helper.copy("botname")
 
+class InfoGatherError(Exception):
+    def __init__(self, message):
+        self.message = message
 
 class Fedora(Plugin):
     def _userlink(self, username: str) -> str:
@@ -37,12 +40,12 @@ class Fedora(Plugin):
         def wrapper(self, *args, **kwargs):
             if self.fasjsonclient is None:
                 # if the connection to FASJSON failed at plugin start, fasjsonclient will be None
-                return f"Sorry, I can not give you the required information. I failed to connect to FASJSON on startup"
+                raise InfoGatherError(f"Sorry, I can not give you the required information. I failed to connect to FASJSON on startup")
             try:
                 return func(self, *args, **kwargs)
             except fasjson_client.errors.ClientSetupError as e:
                 # typically this happens after the plugin starts up and runs for a while i.e. kerb ticket expires
-                return f"Sorry, I can not give you the required information. I failed to connect to FASJSON: **{e}**"
+                raise InfoGatherError(f"Sorry, I can not give you the required information. I failed to connect to FASJSON: **{e}**")
             # except fasjson_client.errors.APIError as e:
             # return f"Sorry, I can not give you the required information. FASJSON returned API Error: **{e}**"
 
@@ -56,9 +59,7 @@ class Fedora(Plugin):
                 person = self.fasjsonclient.get_user(username=username).result
             except fasjson_client.errors.APIError as e:
                 if e.code == 404:
-                    return (
-                        f"Sorry, but Fedora Accounts user '{username}' does not exist"
-                    )
+                    raise InfoGatherError(f"Sorry, but Fedora Accounts user '{username}' does not exist")
             return person
 
         def _get_users_by_matrix_id(username: str) -> Union[dict, str]:
@@ -68,7 +69,7 @@ class Fedora(Plugin):
             try:
                 matrix_username, matrix_server = re.findall(r"@(.*):(.*)", username)[0]
             except ValueError or IndexError:
-                return f"Sorry, {username} does not look like a valid matrix user ID (e.g. @username:homeserver.com )"
+                raise InfoGatherError(f"Sorry, {username} does not look like a valid matrix user ID (e.g. @username:homeserver.com )")
 
             # if given a fedora.im address -- just look up the username as a FAS name
             if matrix_server == "fedora.im":
@@ -79,12 +80,12 @@ class Fedora(Plugin):
 
             if len(searchresult) > 1:
                 names = f"{NL}".join(name for name in searchresult)
-                return (
+                raise InfoGatherError(
                     f"{len(searchresult)} Fedora Accounts users have the {username} Matrix Account defined:{NL}"
                     f"{names}"
                 )
             elif len(searchresult) == 0:
-                return f"No Fedora Accounts users have the {username} Matrix Account defined"
+                raise InfoGatherError(f"No Fedora Accounts users have the {username} Matrix Account defined")
 
             return searchresult[0]
 
@@ -103,13 +104,13 @@ class Fedora(Plugin):
                 evt.content.formatted_body,
             )
             if len(u) > 1:
-                return "Sorry, I can only look up one username at a time"
+                raise InfoGatherError("Sorry, I can only look up one username at a time")
             elif len(u) == 1:
                 return _get_users_by_matrix_id(u[0])
 
         usernames = username.split(" ")
         if len(usernames) > 1:
-            return "Sorry, I can only look up one username at a time"
+            raise InfoGatherError("Sorry, I can only look up one username at a time")
 
         # else check if the username given is a matrix id (@<username>:<server.com>)
         if re.search(r"@.*:.*", usernames[0]):
@@ -126,7 +127,7 @@ class Fedora(Plugin):
             members = self.fasjsonclient.list_group_members(groupname=groupname).result
         except fasjson_client.errors.APIError as e:
             if e.code == 404:
-                return f"Sorry, but group '{groupname}' does not exist"
+                raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
         return members
 
     @catch_generic_fasjson_errors
@@ -138,7 +139,7 @@ class Fedora(Plugin):
             ).result
         except fasjson_client.errors.APIError as e:
             if e.code == 404:
-                return f"Sorry, but group '{groupname}' does not exist"
+                raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
         return sponsors
 
     async def start(self) -> None:
@@ -224,17 +225,18 @@ class Fedora(Plugin):
             )
             return
 
-        members = self._get_group_members(groupname)
-
-        if isinstance(members, str):
-            await evt.respond(members)
+        try:
+            members = self._get_group_members(groupname)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return            
+        
+        if len(members) > 200:
+            await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
         else:
-            if len(members) > 200:
-                await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
-            else:
-                await evt.respond(
-                f"Members of {groupname}: {', '.join(self._userlink(m['username']) for m in members)}"
-            )
+            await evt.respond(
+            f"Members of {groupname}: {', '.join(self._userlink(m['username']) for m in members)}"
+        )
 
     @command.new(help="Return a list of owners of the specified group")
     @command.argument("groupname", pass_raw=True, required=True)
@@ -245,14 +247,15 @@ class Fedora(Plugin):
             )
             return
 
-        sponsors = self._get_group_sponsors(groupname)
+        try:
+            sponsors = self._get_group_sponsors(groupname)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
 
-        if isinstance(sponsors, str):
-            await evt.respond(sponsors)
-        else:
-            await evt.respond(
-                f"Sponsors of {groupname}: {', '.join(self._userlink(s['username']) for s in sponsors)}"
-            )
+        await evt.respond(
+            f"Sponsors of {groupname}: {', '.join(self._userlink(s['username']) for s in sponsors)}"
+        )
 
     @command.new(
         help="Return brief information about a Fedora user.", aliases=ALIASES["hello"]
@@ -269,15 +272,16 @@ class Fedora(Plugin):
            (e.g. @username:fedora.im)
 
         """
-        user = self._get_fasuser(username, evt)
+        try:
+            user = self._get_fasuser(username, evt)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
 
-        if isinstance(user, str):
-            await evt.reply(user)
-        else:
-            message = f"{user['human_name']} ({user['username']})"
-            if pronouns := user.get('pronouns'):
-                message += ' - ' + ' or '.join(pronouns)
-            await evt.respond(message)
+        message = f"{user['human_name']} ({user['username']})"
+        if pronouns := user.get('pronouns'):
+            message += ' - ' + ' or '.join(pronouns)
+        await evt.respond(message)
 
     @command.new(
         help="Return brief information about a Fedora user.", aliases=ALIASES["user"]
@@ -294,20 +298,21 @@ class Fedora(Plugin):
            (e.g. @username:fedora.im)
 
         """
-        user = self._get_fasuser(username, evt)
+        try:
+            user = self._get_fasuser(username, evt)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
 
-        if isinstance(user, str):
-            await evt.reply(user)
-        else:
-            await evt.respond(
-                f"User: {user.get('username')},{NL}"
-                f"Name: {user.get('human_name')},{NL}"
-                f"Pronouns: {' or '.join(user.get('pronouns') or [])},{NL}"
-                f"Creation: {user.get('creation')},{NL}"
-                f"Timezone: {user.get('timezone')},{NL}"
-                f"Locale: {user.get('locale')},{NL}"
-                f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])},{NL}"
-            )
+        await evt.respond(
+            f"User: {user.get('username')},{NL}"
+            f"Name: {user.get('human_name')},{NL}"
+            f"Pronouns: {' or '.join(user.get('pronouns') or [])},{NL}"
+            f"Creation: {user.get('creation')},{NL}"
+            f"Timezone: {user.get('timezone')},{NL}"
+            f"Locale: {user.get('locale')},{NL}"
+            f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])},{NL}"
+        )
 
     @command.new(help="Returns the current time of the user.")
     @command.argument("username", pass_raw=True, required=False)
@@ -322,29 +327,30 @@ class Fedora(Plugin):
            (e.g. @username:fedora.im)
 
         """
-        user = self._get_fasuser(username, evt)
+        try:
+            user = self._get_fasuser(username, evt)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
 
-        if isinstance(user, str):
-            await evt.reply(user)
-        else:
-            timezone_name = user["timezone"]
-            if timezone_name is None:
-                await evt.reply(
-                    'User "%s" doesn\'t share their timezone' % user.get("username")
-                )
-                return
-            try:
-                time = datetime.datetime.now(pytz.timezone(timezone_name))
-            except Exception:
-                await evt.reply(
-                    'The timezone of "%s" was unknown: "%s"'
-                    % (user.get("username"), timezone_name)
-                )
-                return
-            await evt.respond(
-                'The current local time of "%s" is: "%s" (timezone: %s)'
-                % (user.get("username"), time.strftime("%H:%M"), timezone_name)
+        timezone_name = user["timezone"]
+        if timezone_name is None:
+            await evt.reply(
+                'User "%s" doesn\'t share their timezone' % user.get("username")
             )
+            return
+        try:
+            time = datetime.datetime.now(pytz.timezone(timezone_name))
+        except Exception:
+            await evt.reply(
+                'The timezone of "%s" was unknown: "%s"'
+                % (user.get("username"), timezone_name)
+            )
+            return
+        await evt.respond(
+            'The current local time of "%s" is: "%s" (timezone: %s)'
+            % (user.get("username"), time.strftime("%H:%M"), timezone_name)
+        )
 
     @command.new(help="Retrieve the owner of a given package")
     @command.argument("package", required=True)
@@ -365,7 +371,6 @@ class Fedora(Plugin):
             return
 
         req_json = req.json()
-        self.log.error(req_json)
         admins = ", ".join(req_json["access_users"]["admin"])
         owners = ", ".join(req_json["access_users"]["owner"])
         committers = ", ".join(req_json["access_users"]["commit"])
