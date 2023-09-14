@@ -4,6 +4,8 @@ import re
 import datetime
 import pytz
 import requests
+import httpx
+from urllib.parse import urljoin
 
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 
@@ -22,7 +24,7 @@ class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("fasjson_url")
         helper.copy("accounts_baseurl")
-        helper.copy("botname")
+        helper.copy("pagure_url")
 
 class InfoGatherError(Exception):
     def __init__(self, message):
@@ -141,10 +143,28 @@ class Fedora(Plugin):
             if e.code == 404:
                 raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
         return sponsors
+    
+    async def _get_pagure_issue(self, project, issue_id, namespace=''):
+        endpoint = self.pagure_url + "/".join([namespace, project, 'issue', issue_id])
+        async with httpx.AsyncClient() as client:
+            response = await client.get(endpoint)
+        json = response.json()
+        if response.status_code == 404:
+            error_code = json.get('error_code')
+            error = json.get('error')
+            if error_code == 'ENOPROJECT':
+                raise InfoGatherError(f"Project {project} not found")
+            elif error_code == 'ENOISSUE':
+                raise InfoGatherError(f"Issue #{issue_id} not found on {project} project")
+            else:
+                raise InfoGatherError(f"Issue querying Pagure: {error_code}: {error}")
+        elif response.status_code != 200:
+            raise InfoGatherError(f"Issue querying Pagure: {response.status_code}: {response.reason_phrase}")
+        return json
 
     async def start(self) -> None:
         self.config.load_and_update()
-        self.log.debug("Loaded %s from config example 2", self.config["fasjson_url"])
+        self.pagure_url = self.config["pagure_url"]
         try:
             self.fasjsonclient = fasjson_client.Client(
                 url=self.config["fasjson_url"],
@@ -385,3 +405,91 @@ class Fedora(Plugin):
         resp = "".join([x for x in [owners, admins, committers] if x != ""])
 
         await evt.respond(resp)
+
+    @command.new(help="return a pagure issue")
+    @command.argument("project", required=True)
+    @command.argument("issue_id", required=True)
+    async def pagureissue(self, evt: MessageEvent, project: str, issue_id: str) -> None:
+        """
+        Show a summary of a Pagure issue
+
+        #### Arguments ####
+
+        * `project`: a project in pagure.io
+        * `issue_id`: the issue number
+
+        """
+        try:
+            issue = await self._get_pagure_issue(project, issue_id)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
+        title = issue.get('title')
+        full_url = issue.get('full_url')
+        await evt.respond(f"[{project} #{issue_id}]({full_url}): {title}")
+    
+    # these were done in supybot / limnoria with the alias plugin. need to find a better way to
+    # do this so they can be defined, but for now, lets just define the commands here.
+    @command.new(help="Get a Summary of a ticket from the packaging-committee ticket tracker")
+    @command.argument("issue_id", required=True)
+    async def fpc(self, evt: MessageEvent, issue_id: str) -> None:
+        """
+        Show a summary of an issue in the `packaging-committee` pagure.io project
+
+        #### Arguments ####
+
+        * `issue_id`: the issue number
+
+        """
+        try:
+            issue = await self._get_pagure_issue("packaging-committee", issue_id)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
+        title = issue.get('title')
+        full_url = issue.get('full_url')
+        await evt.respond(f"[packaging-committee #{issue_id}]({full_url}): {title}")
+
+    # these were done in supybot / limnoria with the alias plugin. need to find a better way to
+    # do this so they can be defined, but for now, lets just define the commands here.
+    @command.new(help="Get a Summary of a ticket from the epel ticket tracker")
+    @command.argument("issue_id", required=True)
+    async def epel(self, evt: MessageEvent, issue_id: str) -> None:
+        """
+        Show a summary of an issue in the `epel` pagure.io project
+
+        #### Arguments ####
+
+        * `issue_id`: the issue number
+
+        """
+        try:
+            issue = await self._get_pagure_issue("epel", issue_id)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
+        title = issue.get('title')
+        full_url = issue.get('full_url')
+        await evt.respond(f"[epel #{issue_id}]({full_url}): {title}")
+
+    # these were done in supybot / limnoria with the alias plugin. need to find a better way to
+    # do this so they can be defined, but for now, lets just define the commands here.
+    @command.new(help="Get a Summary of a ticket from the fesco ticket tracker")
+    @command.argument("issue_id", required=True)
+    async def fesco(self, evt: MessageEvent, issue_id: str) -> None:
+        """
+        Show a summary of an issue in the `fesco` pagure.io project
+
+        #### Arguments ####
+
+        * `issue_id`: the issue number
+
+        """
+        try:
+            issue = await self._get_pagure_issue("fesco", issue_id)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
+        title = issue.get('title')
+        full_url = issue.get('full_url')
+        await evt.respond(f"[fesco #{issue_id}]({full_url}): {title}")
