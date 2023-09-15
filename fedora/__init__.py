@@ -1,16 +1,14 @@
-from typing import Type, Union
+import datetime
 import inspect
 import re
-import datetime
+from typing import Type, Union
+
+import httpx
 import pytz
 import requests
-import httpx
-from httpx_gssapi import HTTPSPNEGOAuth
-
-from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
-
-from maubot import Plugin, MessageEvent
+from maubot import MessageEvent, Plugin
 from maubot.handlers import command
+from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 
 from .clients.fasjson import FasjsonClient
 from .exceptions import InfoGatherError
@@ -25,6 +23,7 @@ class Config(BaseProxyConfig):
         helper.copy("fasjson_url")
         helper.copy("pagure_url")
 
+
 class Fedora(Plugin):
     async def _get_fasuser(self, username: str, evt: MessageEvent):
         async def _get_users_by_matrix_id(username: str) -> Union[dict, str]:
@@ -34,7 +33,9 @@ class Fedora(Plugin):
             try:
                 matrix_username, matrix_server = re.findall(r"@(.*):(.*)", username)[0]
             except ValueError or IndexError:
-                raise InfoGatherError(f"Sorry, {username} does not look like a valid matrix user ID (e.g. @username:homeserver.com )")
+                raise InfoGatherError(
+                    f"Sorry, {username} does not look like a valid matrix user ID (e.g. @username:homeserver.com )"
+                )
 
             # if given a fedora.im address -- just look up the username as a FAS name
             if matrix_server == "fedora.im":
@@ -42,7 +43,9 @@ class Fedora(Plugin):
                 return user
 
             searchterm = f"matrix://{matrix_server}/{matrix_username}"
-            searchresult = await self.fasjsonclient.search_users(params={'ircnick__exact':searchterm})
+            searchresult = await self.fasjsonclient.search_users(
+                params={"ircnick__exact": searchterm}
+            )
 
             if len(searchresult) > 1:
                 names = f"{NL}".join(name for name in searchresult)
@@ -51,7 +54,9 @@ class Fedora(Plugin):
                     f"{names}"
                 )
             elif len(searchresult) == 0:
-                raise InfoGatherError(f"No Fedora Accounts users have the {username} Matrix Account defined")
+                raise InfoGatherError(
+                    f"No Fedora Accounts users have the {username} Matrix Account defined"
+                )
 
             return searchresult[0]
 
@@ -70,7 +75,9 @@ class Fedora(Plugin):
                 evt.content.formatted_body,
             )
             if len(u) > 1:
-                raise InfoGatherError("Sorry, I can only look up one username at a time")
+                raise InfoGatherError(
+                    "Sorry, I can only look up one username at a time"
+                )
             elif len(u) == 1:
                 mu = await _get_users_by_matrix_id(u[0])
                 return mu
@@ -88,23 +95,26 @@ class Fedora(Plugin):
         else:
             return self.fasjsonclient.get_user(usernames[0])
 
-    
-    async def _get_pagure_issue(self, project, issue_id, namespace=''):
-        endpoint = self.pagure_url + "/".join([namespace, project, 'issue', issue_id])
+    async def _get_pagure_issue(self, project, issue_id, namespace=""):
+        endpoint = self.pagure_url + "/".join([namespace, project, "issue", issue_id])
         async with httpx.AsyncClient() as client:
             response = await client.get(endpoint)
         json = response.json()
         if response.status_code == 404:
-            error_code = json.get('error_code')
-            error = json.get('error')
-            if error_code == 'ENOPROJECT':
+            error_code = json.get("error_code")
+            error = json.get("error")
+            if error_code == "ENOPROJECT":
                 raise InfoGatherError(f"Project {project} not found")
-            elif error_code == 'ENOISSUE':
-                raise InfoGatherError(f"Issue #{issue_id} not found on {project} project")
+            elif error_code == "ENOISSUE":
+                raise InfoGatherError(
+                    f"Issue #{issue_id} not found on {project} project"
+                )
             else:
                 raise InfoGatherError(f"Issue querying Pagure: {error_code}: {error}")
         elif response.status_code != 200:
-            raise InfoGatherError(f"Issue querying Pagure: {response.status_code}: {response.reason_phrase}")
+            raise InfoGatherError(
+                f"Issue querying Pagure: {response.status_code}: {response.reason_phrase}"
+            )
         return json
 
     async def start(self) -> None:
@@ -143,7 +153,10 @@ class Fedora(Plugin):
             # list all the commands with the help arg from command.new
             output = ""
             for c, commandobject in inspect.getmembers(self):
-                if isinstance(commandobject, command.CommandHandler) and not commandobject.__mb_parent__:
+                if (
+                    isinstance(commandobject, command.CommandHandler)
+                    and not commandobject.__mb_parent__
+                ):
                     # generate arguments string
                     arguments = ""
                     for argument in commandobject.__mb_arguments__:
@@ -167,13 +180,13 @@ class Fedora(Plugin):
 
         await evt.respond(f"maubot-fedora version {self.loader.meta.version}")
 
-
     @command.new(help="Query information about Fedora Accounts groups")
     async def group(self, evt: MessageEvent) -> None:
         pass
 
-
-    @group.subcommand(name="members", help="Return a list of members of the specified group")
+    @group.subcommand(
+        name="members", help="Return a list of members of the specified group"
+    )
     @command.argument("groupname", required=True)
     async def group_members(self, evt: MessageEvent, groupname: str) -> None:
         """
@@ -191,20 +204,26 @@ class Fedora(Plugin):
             return
 
         try:
-            members = await self.fasjsonclient.get_group_membership(groupname, membership_type="members")
+            members = await self.fasjsonclient.get_group_membership(
+                groupname, membership_type="members"
+            )
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
-        
+
         if len(members) > 200:
-            await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
+            await evt.respond(
+                f"{groupname} has {len(members)} and thats too much to dump here"
+            )
             return
 
         await evt.respond(
             f"Members of {groupname}: {', '.join(m['username'] for m in members)}"
         )
 
-    @group.subcommand(name="sponsors", help="Return a list of owners of the specified group")
+    @group.subcommand(
+        name="sponsors", help="Return a list of owners of the specified group"
+    )
     @command.argument("groupname", required=True)
     async def group_sponsors(self, evt: MessageEvent, groupname: str) -> None:
         if not groupname:
@@ -214,7 +233,9 @@ class Fedora(Plugin):
             return
 
         try:
-            sponsors = await self.fasjsonclient.get_group_membership(groupname, membership_type="sponsors")
+            sponsors = await self.fasjsonclient.get_group_membership(
+                groupname, membership_type="sponsors"
+            )
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -223,7 +244,9 @@ class Fedora(Plugin):
             f"Sponsors of {groupname}: {', '.join(s['username'] for s in sponsors)}"
         )
 
-    @group.subcommand(name="info", help="Return a list of owners of the specified group")
+    @group.subcommand(
+        name="info", help="Return a list of owners of the specified group"
+    )
     @command.argument("groupname", required=True)
     async def group_info(self, evt: MessageEvent, groupname: str) -> None:
         if not groupname:
@@ -268,8 +291,8 @@ class Fedora(Plugin):
             return
 
         message = f"{user['human_name']} ({user['username']})"
-        if pronouns := user.get('pronouns'):
-            message += ' - ' + ' or '.join(pronouns)
+        if pronouns := user.get("pronouns"):
+            message += " - " + " or ".join(pronouns)
         await evt.respond(message)
 
     @command.new(
@@ -393,13 +416,15 @@ class Fedora(Plugin):
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
-        title = issue.get('title')
-        full_url = issue.get('full_url')
+        title = issue.get("title")
+        full_url = issue.get("full_url")
         await evt.respond(f"[{project} #{issue_id}]({full_url}): {title}")
-    
+
     # these were done in supybot / limnoria with the alias plugin. need to find a better way to
     # do this so they can be defined, but for now, lets just define the commands here.
-    @command.new(help="Get a Summary of a ticket from the packaging-committee ticket tracker")
+    @command.new(
+        help="Get a Summary of a ticket from the packaging-committee ticket tracker"
+    )
     @command.argument("issue_id", required=True)
     async def fpc(self, evt: MessageEvent, issue_id: str) -> None:
         """
@@ -415,8 +440,8 @@ class Fedora(Plugin):
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
-        title = issue.get('title')
-        full_url = issue.get('full_url')
+        title = issue.get("title")
+        full_url = issue.get("full_url")
         await evt.respond(f"[packaging-committee #{issue_id}]({full_url}): {title}")
 
     # these were done in supybot / limnoria with the alias plugin. need to find a better way to
@@ -437,8 +462,8 @@ class Fedora(Plugin):
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
-        title = issue.get('title')
-        full_url = issue.get('full_url')
+        title = issue.get("title")
+        full_url = issue.get("full_url")
         await evt.respond(f"[epel #{issue_id}]({full_url}): {title}")
 
     # these were done in supybot / limnoria with the alias plugin. need to find a better way to
@@ -459,6 +484,6 @@ class Fedora(Plugin):
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
-        title = issue.get('title')
-        full_url = issue.get('full_url')
+        title = issue.get("title")
+        full_url = issue.get("full_url")
         await evt.respond(f"[fesco #{issue_id}]({full_url}): {title}")
