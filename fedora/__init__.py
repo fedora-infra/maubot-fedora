@@ -5,7 +5,6 @@ import datetime
 import pytz
 import requests
 import httpx
-from urllib.parse import urljoin
 from httpx_gssapi import HTTPSPNEGOAuth
 
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
@@ -31,13 +30,6 @@ class InfoGatherError(Exception):
         self.message = message
 
 class Fedora(Plugin):
-    def _userlink(self, username: str) -> str:
-        """
-        Returns a markdown string with the link to the accounts
-        for that user
-        """
-        return f"[{username}]({self.config['accounts_baseurl']}user/{username})"
-
     def catch_generic_fasjson_errors(func):
         def wrapper(self, *args, **kwargs):
             if self.fasjsonclient is None:
@@ -253,7 +245,7 @@ class Fedora(Plugin):
             return
 
         await evt.respond(
-            f"Members of {groupname}: {', '.join(self._userlink(m['username']) for m in members)}"
+            f"Members of {groupname}: {', '.join(m['username'] for m in members)}"
         )
 
     @group.subcommand(help="Return a list of owners of the specified group")
@@ -272,7 +264,7 @@ class Fedora(Plugin):
             return
 
         await evt.respond(
-            f"Sponsors of {groupname}: {', '.join(self._userlink(s['username']) for s in sponsors)}"
+            f"Sponsors of {groupname}: {', '.join(s['username'] for s in sponsors)}"
         )
 
     @command.new(
