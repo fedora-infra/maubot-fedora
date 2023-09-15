@@ -3,14 +3,14 @@ import inspect
 import re
 from typing import Type, Union
 
-import httpx
 import pytz
-import requests
 from maubot import MessageEvent, Plugin
 from maubot.handlers import command
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 
 from .clients.fasjson import FasjsonClient
+from .clients.pagure import PagureClient
+
 from .exceptions import InfoGatherError
 
 NL = "      \n"
@@ -21,7 +21,8 @@ ALIASES = {"hello": ["hi", "hello2", "hellomynameis"], "user": ["fasinfo"]}
 class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("fasjson_url")
-        helper.copy("pagure_url")
+        helper.copy("pagureio_url")
+        helper.copy("paguredistgit_url")
 
 
 class Fedora(Plugin):
@@ -93,33 +94,13 @@ class Fedora(Plugin):
 
         # finally, assume we were given a FAS / Fedora Account ID and use that
         else:
-            return self.fasjsonclient.get_user(usernames[0])
-
-    async def _get_pagure_issue(self, project, issue_id, namespace=""):
-        endpoint = self.pagure_url + "/".join([namespace, project, "issue", issue_id])
-        async with httpx.AsyncClient() as client:
-            response = await client.get(endpoint)
-        json = response.json()
-        if response.status_code == 404:
-            error_code = json.get("error_code")
-            error = json.get("error")
-            if error_code == "ENOPROJECT":
-                raise InfoGatherError(f"Project {project} not found")
-            elif error_code == "ENOISSUE":
-                raise InfoGatherError(
-                    f"Issue #{issue_id} not found on {project} project"
-                )
-            else:
-                raise InfoGatherError(f"Issue querying Pagure: {error_code}: {error}")
-        elif response.status_code != 200:
-            raise InfoGatherError(
-                f"Issue querying Pagure: {response.status_code}: {response.reason_phrase}"
-            )
-        return json
+            user = await self.fasjsonclient.get_user(usernames[0])
+            return user
 
     async def start(self) -> None:
         self.config.load_and_update()
-        self.pagure_url = self.config["pagure_url"]
+        self.pagureioclient = PagureClient(self.config["pagureio_url"])
+        self.paguredistgitclient = PagureClient(self.config["paguredistgit_url"])
         self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
 
     async def stop(self) -> None:
@@ -375,17 +356,12 @@ class Fedora(Plugin):
         * `package`: A Fedora package name
 
         """
-        # First use pagure info
-        url = "https://src.fedoraproject.org/api/0/rpms/"
-        req = requests.get(url + package)
-        if req.status_code == 404:
-            await evt.reply("Package %s not found." % package)
-            return
+ 
+        packageinfo = await self.paguredistgitclient.get_project(package, namespace="rpms")
 
-        req_json = req.json()
-        admins = ", ".join(req_json["access_users"]["admin"])
-        owners = ", ".join(req_json["access_users"]["owner"])
-        committers = ", ".join(req_json["access_users"]["commit"])
+        admins = ", ".join(packageinfo["access_users"]["admin"])
+        owners = ", ".join(packageinfo["access_users"]["owner"])
+        committers = ", ".join(packageinfo["access_users"]["commit"])
 
         if owners:
             owners = f"__owner:__ {owners}{NL}"
@@ -412,7 +388,7 @@ class Fedora(Plugin):
 
         """
         try:
-            issue = await self._get_pagure_issue(project, issue_id)
+            issue = await self.pagureioclient.get_issue(project, issue_id)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -436,7 +412,7 @@ class Fedora(Plugin):
 
         """
         try:
-            issue = await self._get_pagure_issue("packaging-committee", issue_id)
+            issue = await self.pagureioclient.get_issue("packaging-committee", issue_id)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -458,7 +434,7 @@ class Fedora(Plugin):
 
         """
         try:
-            issue = await self._get_pagure_issue("epel", issue_id)
+            issue = await self.pagureioclient.get_issue("epel", issue_id)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -480,7 +456,7 @@ class Fedora(Plugin):
 
         """
         try:
-            issue = await self._get_pagure_issue("fesco", issue_id)
+            issue = await self.pagureioclient.get_issue("fesco", issue_id)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
