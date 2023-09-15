@@ -8,11 +8,12 @@ import httpx
 from httpx_gssapi import HTTPSPNEGOAuth
 
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
-import fasjson_client
 
 from maubot import Plugin, MessageEvent
 from maubot.handlers import command
 
+from .clients.fasjson import FasjsonClient
+from .exceptions import InfoGatherError
 
 NL = "      \n"
 
@@ -25,38 +26,9 @@ class Config(BaseProxyConfig):
         helper.copy("accounts_baseurl")
         helper.copy("pagure_url")
 
-class InfoGatherError(Exception):
-    def __init__(self, message):
-        self.message = message
-
 class Fedora(Plugin):
-    def catch_generic_fasjson_errors(func):
-        def wrapper(self, *args, **kwargs):
-            if self.fasjsonclient is None:
-                # if the connection to FASJSON failed at plugin start, fasjsonclient will be None
-                raise InfoGatherError(f"Sorry, I can not give you the required information. I failed to connect to FASJSON on startup")
-            try:
-                return func(self, *args, **kwargs)
-            except fasjson_client.errors.ClientSetupError as e:
-                # typically this happens after the plugin starts up and runs for a while i.e. kerb ticket expires
-                raise InfoGatherError(f"Sorry, I can not give you the required information. I failed to connect to FASJSON: **{e}**")
-            # except fasjson_client.errors.APIError as e:
-            # return f"Sorry, I can not give you the required information. FASJSON returned API Error: **{e}**"
-
-        return wrapper
-
-    @catch_generic_fasjson_errors
-    def _get_fasuser(self, username: str, evt: MessageEvent):
-        def _get_person_by_username(username: str) -> dict | str:
-            """looks up a user by the username"""
-            try:
-                person = self.fasjsonclient.get_user(username=username).result
-            except fasjson_client.errors.APIError as e:
-                if e.code == 404:
-                    raise InfoGatherError(f"Sorry, but Fedora Accounts user '{username}' does not exist")
-            return person
-
-        def _get_users_by_matrix_id(username: str) -> Union[dict, str]:
+    async def _get_fasuser(self, username: str, evt: MessageEvent):
+        async def _get_users_by_matrix_id(username: str) -> Union[dict, str]:
             """looks up a user by the matrix id"""
 
             # Fedora Accounts stores these strangly but this is to handle that
@@ -67,10 +39,11 @@ class Fedora(Plugin):
 
             # if given a fedora.im address -- just look up the username as a FAS name
             if matrix_server == "fedora.im":
-                return _get_person_by_username(matrix_username)
+                user = await self.fasjsonclient.get_user(matrix_username)
+                return user
 
             searchterm = f"matrix://{matrix_server}/{matrix_username}"
-            searchresult = self.fasjsonclient.search(ircnick__exact=searchterm).result
+            searchresult = await self.fasjsonclient.search_users(params={'ircnick__exact':searchterm})
 
             if len(searchresult) > 1:
                 names = f"{NL}".join(name for name in searchresult)
@@ -100,7 +73,8 @@ class Fedora(Plugin):
             if len(u) > 1:
                 raise InfoGatherError("Sorry, I can only look up one username at a time")
             elif len(u) == 1:
-                return _get_users_by_matrix_id(u[0])
+                mu = await _get_users_by_matrix_id(u[0])
+                return mu
 
         usernames = username.split(" ")
         if len(usernames) > 1:
@@ -108,20 +82,12 @@ class Fedora(Plugin):
 
         # else check if the username given is a matrix id (@<username>:<server.com>)
         if re.search(r"@.*:.*", usernames[0]):
-            return _get_users_by_matrix_id(usernames[0])
+            musers = await _get_users_by_matrix_id(usernames[0])
+            return musers
 
         # finally, assume we were given a FAS / Fedora Account ID and use that
         else:
-            return _get_person_by_username(usernames[0])
-
-    async def _get_group_membership(self, groupname: str, type="members"):
-        """looks up a group members by the groupname"""
-        endpoint = self.fasjson_url +"v1/"+ "/".join(['groups', groupname, type])
-        async with httpx.AsyncClient() as client:
-            response = await client.get(endpoint, follow_redirects=True, auth=HTTPSPNEGOAuth(), headers={'X-Fields': 'username,ircnicks'})
-        if response.status_code == 404:
-            raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
-        return response.json().get('result')
+            return self.fasjsonclient.get_user(usernames[0])
 
     
     async def _get_pagure_issue(self, project, issue_id, namespace=''):
@@ -145,16 +111,7 @@ class Fedora(Plugin):
     async def start(self) -> None:
         self.config.load_and_update()
         self.pagure_url = self.config["pagure_url"]
-        self.fasjson_url = self.config["fasjson_url"]
-        try:
-            self.fasjsonclient = fasjson_client.Client(
-                url=self.config["fasjson_url"],
-            )
-        except fasjson_client.errors.ClientSetupError as e:
-            self.fasjsonclient = None
-            self.log.error(
-                "Something went wrong setting up " "fasjson client with error: %s" % e
-            )
+        self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
 
     async def stop(self) -> None:
         pass
@@ -217,9 +174,9 @@ class Fedora(Plugin):
         pass
 
 
-    @group.subcommand(help="Return a list of members of the specified group")
+    @group.subcommand(name="members", help="Return a list of members of the specified group")
     @command.argument("groupname", required=True)
-    async def members(self, evt: MessageEvent, groupname: str) -> None:
+    async def group_members(self, evt: MessageEvent, groupname: str) -> None:
         """
         Return a list of the members of the Fedora Accounts group
 
@@ -235,10 +192,10 @@ class Fedora(Plugin):
             return
 
         try:
-            members = await self._get_group_membership(groupname, type="members")
+            members = await self.fasjsonclient.get_group_membership(groupname, membership_type="members")
         except InfoGatherError as e:
             await evt.respond(e.message)
-            return            
+            return
         
         if len(members) > 200:
             await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
@@ -248,9 +205,9 @@ class Fedora(Plugin):
             f"Members of {groupname}: {', '.join(m['username'] for m in members)}"
         )
 
-    @group.subcommand(help="Return a list of owners of the specified group")
+    @group.subcommand(name="sponsors", help="Return a list of owners of the specified group")
     @command.argument("groupname", required=True)
-    async def sponsors(self, evt: MessageEvent, groupname: str) -> None:
+    async def group_sponsors(self, evt: MessageEvent, groupname: str) -> None:
         if not groupname:
             await evt.respond(
                 "groupname argument is required. e.g. `!group sponsors designteam`"
@@ -258,13 +215,36 @@ class Fedora(Plugin):
             return
 
         try:
-            sponsors = await self._get_group_membership(groupname, type="sponsors")
+            sponsors = await self.fasjsonclient.get_group_membership(groupname, membership_type="sponsors")
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
 
         await evt.respond(
             f"Sponsors of {groupname}: {', '.join(s['username'] for s in sponsors)}"
+        )
+
+    @group.subcommand(name="info", help="Return a list of owners of the specified group")
+    @command.argument("groupname", required=True)
+    async def group_info(self, evt: MessageEvent, groupname: str) -> None:
+        if not groupname:
+            await evt.respond(
+                "groupname argument is required. e.g. `!group info designteam`"
+            )
+            return
+
+        try:
+            group = await self.fasjsonclient.get_group(groupname)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
+
+        await evt.respond(
+            f"**Group Name:** {group.get('groupname')}{NL}"
+            f"**Description:** {group.get('description')}{NL}"
+            f"**URL:** {group.get('url')},{NL}"
+            f"**Mailing List:** {group.get('mailing_list')}{NL}"
+            f"**Chat:** `{'` and `'.join(c for c in group.get('irc', 'none'))}`{NL}"
         )
 
     @command.new(
@@ -283,7 +263,7 @@ class Fedora(Plugin):
 
         """
         try:
-            user = self._get_fasuser(username, evt)
+            user = await self._get_fasuser(username, evt)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -309,7 +289,7 @@ class Fedora(Plugin):
 
         """
         try:
-            user = self._get_fasuser(username, evt)
+            user = await self._get_fasuser(username, evt)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -338,7 +318,7 @@ class Fedora(Plugin):
 
         """
         try:
-            user = self._get_fasuser(username, evt)
+            user = await self._get_fasuser(username, evt)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
