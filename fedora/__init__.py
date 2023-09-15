@@ -6,9 +6,9 @@ import pytz
 import requests
 import httpx
 from urllib.parse import urljoin
+from httpx_gssapi import HTTPSPNEGOAuth
 
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
-
 import fasjson_client
 
 from maubot import Plugin, MessageEvent
@@ -122,27 +122,15 @@ class Fedora(Plugin):
         else:
             return _get_person_by_username(usernames[0])
 
-    @catch_generic_fasjson_errors
-    def _get_group_members(self, groupname: str) -> Union[list, str]:
+    async def _get_group_membership(self, groupname: str, type="members"):
         """looks up a group members by the groupname"""
-        try:
-            members = self.fasjsonclient.list_group_members(groupname=groupname).result
-        except fasjson_client.errors.APIError as e:
-            if e.code == 404:
-                raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
-        return members
+        endpoint = self.fasjson_url +"v1/"+ "/".join(['groups', groupname, type])
+        async with httpx.AsyncClient() as client:
+            response = await client.get(endpoint, follow_redirects=True, auth=HTTPSPNEGOAuth(), headers={'X-Fields': 'username,ircnicks'})
+        if response.status_code == 404:
+            raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
+        return response.json().get('result')
 
-    @catch_generic_fasjson_errors
-    def _get_group_sponsors(self, groupname: str) -> Union[list, str]:
-        """looks up a group sponsors by the groupname"""
-        try:
-            sponsors = self.fasjsonclient.list_group_sponsors(
-                groupname=groupname
-            ).result
-        except fasjson_client.errors.APIError as e:
-            if e.code == 404:
-                raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
-        return sponsors
     
     async def _get_pagure_issue(self, project, issue_id, namespace=''):
         endpoint = self.pagure_url + "/".join([namespace, project, 'issue', issue_id])
@@ -165,6 +153,7 @@ class Fedora(Plugin):
     async def start(self) -> None:
         self.config.load_and_update()
         self.pagure_url = self.config["pagure_url"]
+        self.fasjson_url = self.config["fasjson_url"]
         try:
             self.fasjsonclient = fasjson_client.Client(
                 url=self.config["fasjson_url"],
@@ -206,7 +195,7 @@ class Fedora(Plugin):
             # list all the commands with the help arg from command.new
             output = ""
             for c, commandobject in inspect.getmembers(self):
-                if isinstance(commandobject, command.CommandHandler):
+                if isinstance(commandobject, command.CommandHandler) and not commandobject.__mb_parent__:
                     # generate arguments string
                     arguments = ""
                     for argument in commandobject.__mb_arguments__:
@@ -230,8 +219,14 @@ class Fedora(Plugin):
 
         await evt.respond(f"maubot-fedora version {self.loader.meta.version}")
 
-    @command.new(help="Return a list of members of the specified group")
-    @command.argument("groupname", pass_raw=True, required=True)
+
+    @command.new(help="Query information about Fedora Accounts groups")
+    async def group(self, evt: MessageEvent) -> None:
+        pass
+
+
+    @group.subcommand(help="Return a list of members of the specified group")
+    @command.argument("groupname", required=True)
     async def members(self, evt: MessageEvent, groupname: str) -> None:
         """
         Return a list of the members of the Fedora Accounts group
@@ -239,36 +234,39 @@ class Fedora(Plugin):
         ## Arguments ##
         `groupname`: (required) The name of the Fedora Accounts group
         """
+        # required=True on subcommand arguments doenst seem to work
+        # so we do it ourselves
         if not groupname:
             await evt.respond(
-                "groupname argument is required. e.g. `!members designteam`"
+                "groupname argument is required. e.g. `!group members designteam`"
             )
             return
 
         try:
-            members = self._get_group_members(groupname)
+            members = await self._get_group_membership(groupname, type="members")
         except InfoGatherError as e:
             await evt.respond(e.message)
             return            
         
         if len(members) > 200:
             await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
-        else:
-            await evt.respond(
+            return
+
+        await evt.respond(
             f"Members of {groupname}: {', '.join(self._userlink(m['username']) for m in members)}"
         )
 
-    @command.new(help="Return a list of owners of the specified group")
-    @command.argument("groupname", pass_raw=True, required=True)
+    @group.subcommand(help="Return a list of owners of the specified group")
+    @command.argument("groupname", required=True)
     async def sponsors(self, evt: MessageEvent, groupname: str) -> None:
         if not groupname:
             await evt.respond(
-                "groupname argument is required. e.g. `!sponsors designteam`"
+                "groupname argument is required. e.g. `!group sponsors designteam`"
             )
             return
 
         try:
-            sponsors = self._get_group_sponsors(groupname)
+            sponsors = await self._get_group_membership(groupname, type="sponsors")
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
