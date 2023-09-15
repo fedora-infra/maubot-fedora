@@ -23,7 +23,6 @@ ALIASES = {"hello": ["hi", "hello2", "hellomynameis"], "user": ["fasinfo"]}
 class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("fasjson_url")
-        helper.copy("accounts_baseurl")
         helper.copy("pagure_url")
 
 class Fedora(Plugin):
