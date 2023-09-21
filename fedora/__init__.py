@@ -49,7 +49,7 @@ class Fedora(Plugin):
             )
 
             if len(searchresult) > 1:
-                names = f"{NL}".join(name for name in searchresult)
+                names = f"{NL}".join([name['username'] for name in searchresult])
                 raise InfoGatherError(
                     f"{len(searchresult)} Fedora Accounts users have the {username} Matrix Account defined:{NL}"
                     f"{names}"
