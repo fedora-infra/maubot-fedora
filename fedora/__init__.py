@@ -464,10 +464,13 @@ class Fedora(Plugin):
         * `package`: A Fedora package name
 
         """
-
-        packageinfo = await self.paguredistgitclient.get_project(
-            package, namespace="rpms"
-        )
+        try:
+            packageinfo = await self.paguredistgitclient.get_project(
+                package, namespace="rpms"
+            )
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
 
         admins = ", ".join(packageinfo["access_users"]["admin"])
         owners = ", ".join(packageinfo["access_users"]["owner"])
