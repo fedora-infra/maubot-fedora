@@ -503,6 +503,17 @@ class Fedora(Plugin):
         await evt.respond(f"[RHBZ#{bug_id}](https://bugzilla.redhat.com/{bug_id}): {json['bugs'][0]['summary']}")
 
 
+    async def _get_pagure_issue(self, evt: MessageEvent, project: str, issue_id: str) -> None:
+        try:
+            issue = await self.pagureioclient.get_issue(project, issue_id)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
+        title = issue.get("title")
+        full_url = issue.get("full_url")
+        await evt.respond(f"[{project} #{issue_id}]({full_url}): {title}")
+
+
     @command.new(help="return a pagure issue")
     @command.argument("project", required=True)
     @command.argument("issue_id", required=True)
@@ -516,14 +527,7 @@ class Fedora(Plugin):
         * `issue_id`: the issue number
 
         """
-        try:
-            issue = await self.pagureioclient.get_issue(project, issue_id)
-        except InfoGatherError as e:
-            await evt.respond(e.message)
-            return
-        title = issue.get("title")
-        full_url = issue.get("full_url")
-        await evt.respond(f"[{project} #{issue_id}]({full_url}): {title}")
+        await self._get_pagure_issue(evt, project, issue_id)
 
     # these were done in supybot / limnoria with the alias plugin. need to find a better way to
     # do this so they can be defined, but for now, lets just define the commands here.
@@ -540,14 +544,7 @@ class Fedora(Plugin):
         * `issue_id`: the issue number
 
         """
-        try:
-            issue = await self.pagureioclient.get_issue("packaging-committee", issue_id)
-        except InfoGatherError as e:
-            await evt.respond(e.message)
-            return
-        title = issue.get("title")
-        full_url = issue.get("full_url")
-        await evt.respond(f"[packaging-committee #{issue_id}]({full_url}): {title}")
+        await self._get_pagure_issue(evt, "packaging-committee", issue_id)
 
     # these were done in supybot / limnoria with the alias plugin. need to find a better way to
     # do this so they can be defined, but for now, lets just define the commands here.
@@ -562,14 +559,7 @@ class Fedora(Plugin):
         * `issue_id`: the issue number
 
         """
-        try:
-            issue = await self.pagureioclient.get_issue("epel", issue_id)
-        except InfoGatherError as e:
-            await evt.respond(e.message)
-            return
-        title = issue.get("title")
-        full_url = issue.get("full_url")
-        await evt.respond(f"[epel #{issue_id}]({full_url}): {title}")
+        await self._get_pagure_issue(evt, "epel", issue_id)
 
     # these were done in supybot / limnoria with the alias plugin. need to find a better way to
     # do this so they can be defined, but for now, lets just define the commands here.
@@ -584,11 +574,4 @@ class Fedora(Plugin):
         * `issue_id`: the issue number
 
         """
-        try:
-            issue = await self.pagureioclient.get_issue("fesco", issue_id)
-        except InfoGatherError as e:
-            await evt.respond(e.message)
-            return
-        title = issue.get("title")
-        full_url = issue.get("full_url")
-        await evt.respond(f"[fesco #{issue_id}]({full_url}): {title}")
+        await self._get_pagure_issue(evt, "fesco", issue_id)
