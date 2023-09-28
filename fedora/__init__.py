@@ -268,12 +268,13 @@ class Fedora(Plugin):
             await evt.respond(e.message)
             return
 
+        chat_channels = f"`{'` and `'.join(c for c in group['irc'])}`" if "irc" in group else "None"
         await evt.respond(
             f"**Group Name:** {group.get('groupname')}{NL}"
             f"**Description:** {group.get('description')}{NL}"
             f"**URL:** {group.get('url')},{NL}"
             f"**Mailing List:** {group.get('mailing_list')}{NL}"
-            f"**Chat:** `{'` and `'.join(c for c in group.get('irc', 'none'))}`{NL}"
+            f"**Chat:** {chat_channels}{NL}"
         )
 
     @command.new(
