@@ -81,7 +81,7 @@ async def test_localtime(bot, plugin, respx_mock, monkeypatch):
     fake_now = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     datetime_mock = mock.MagicMock(wraps=datetime)
     datetime_mock.now.side_effect = fake_now.astimezone
-    monkeypatch.setattr(fedora, "datetime", datetime_mock)
+    monkeypatch.setattr(fedora.fas, "datetime", datetime_mock)
     await bot.send("!localtime dummy")
     assert len(bot.sent) == 1
     expected_time = fake_now.astimezone(pytz.timezone("Europe/Paris"))
