@@ -1,4 +1,4 @@
-from mautrix.util.async_db import UpgradeTable, Connection
+from mautrix.util.async_db import Connection, UpgradeTable
 
 upgrade_table = UpgradeTable()
 

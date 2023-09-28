@@ -12,12 +12,10 @@ class FasjsonClient:
         kwargs["follow_redirects"] = True
         kwargs["auth"] = HTTPSPNEGOAuth()
         async with httpx.AsyncClient() as client:
-            response = await client.get(self.baseurl + endpoint + '/', **kwargs)
+            response = await client.get(self.baseurl + endpoint + "/", **kwargs)
         return response
 
-    async def get_group_membership(
-        self, groupname, membership_type="members", params=None
-    ):
+    async def get_group_membership(self, groupname, membership_type="members", params=None):
         """looks up a group membership (members or sponsors) by the groupname"""
         response = await self._get(
             "/".join(["groups", groupname, membership_type]),
@@ -39,9 +37,7 @@ class FasjsonClient:
         """looks up a group by the groupname"""
         response = await self._get("/".join(["users", username]), params=params)
         if response.status_code == 404:
-            raise InfoGatherError(
-                f"Sorry, but Fedora Accounts user '{username}' does not exist"
-            )
+            raise InfoGatherError(f"Sorry, but Fedora Accounts user '{username}' does not exist")
         return response.json().get("result")
 
     async def search_users(self, params=None):

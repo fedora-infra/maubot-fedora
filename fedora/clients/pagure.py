@@ -14,9 +14,7 @@ class PagureClient:
 
     def _check_errors(self, response):
         if response.status_code == 404:
-            raise InfoGatherError(
-                f"Issue querying Pagure: {response.json().get('error')}"
-            )
+            raise InfoGatherError(f"Issue querying Pagure: {response.json().get('error')}")
         elif response.status_code != 200:
             raise InfoGatherError(
                 f"Issue querying Pagure: {response.status_code}: {response.reason_phrase}"

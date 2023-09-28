@@ -1,21 +1,19 @@
 import datetime
 import inspect
 import re
-from typing import Type, Union
 
 import pytz
+from asyncpg.exceptions import UniqueViolationError
 from maubot import MessageEvent, Plugin
 from maubot.handlers import command
 from mautrix.util.async_db import UpgradeTable
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
-from asyncpg.exceptions import UniqueViolationError
 
+from .clients.bugzilla import BugzillaClient
 from .clients.fasjson import FasjsonClient
 from .clients.pagure import PagureClient
-from .clients.bugzilla import BugzillaClient
-
-from .exceptions import InfoGatherError
 from .db import upgrade_table
+from .exceptions import InfoGatherError
 
 NL = "      \n"
 
@@ -51,16 +49,17 @@ class Fedora(Plugin):
         return f'<a href="https://matrix.to/#/{mxid}">{name if name else mxid}</a>'
 
     async def _get_fasuser(self, username: str, evt: MessageEvent):
-        async def _get_users_by_matrix_id(username: str) -> Union[dict, str]:
+        async def _get_users_by_matrix_id(username: str) -> dict | str:
             """looks up a user by the matrix id"""
 
             # Fedora Accounts stores these strangly but this is to handle that
             try:
                 matrix_username, matrix_server = re.findall(r"@(.*):(.*)", username)[0]
-            except ValueError or IndexError:
+            except (ValueError, IndexError) as e:
                 raise InfoGatherError(
-                    f"Sorry, {username} does not look like a valid matrix user ID (e.g. @username:homeserver.com )"
-                )
+                    f"Sorry, {username} does not look like a valid matrix user ID "
+                    "(e.g. @username:homeserver.com )"
+                ) from e
 
             # if given a fedora.im address -- just look up the username as a FAS name
             if matrix_server == "fedora.im":
@@ -75,7 +74,8 @@ class Fedora(Plugin):
             if len(searchresult) > 1:
                 names = f"{NL}".join([name["username"] for name in searchresult])
                 raise InfoGatherError(
-                    f"{len(searchresult)} Fedora Accounts users have the {username} Matrix Account defined:{NL}"
+                    f"{len(searchresult)} Fedora Accounts users have the {username} "
+                    f"Matrix Account defined:{NL}"
                     f"{names}"
                 )
             elif len(searchresult) == 0:
@@ -85,7 +85,8 @@ class Fedora(Plugin):
 
             return searchresult[0]
 
-        # if no username is supplied, we use the matrix id of the sender (e.g. "@dudemcpants:fedora.im")
+        # if no username is supplied, we use the matrix id of the sender
+        # (e.g. "@dudemcpants:fedora.im")
         if not username:
             username = evt.sender
 
@@ -100,9 +101,7 @@ class Fedora(Plugin):
                 evt.content.formatted_body,
             )
             if len(u) > 1:
-                raise InfoGatherError(
-                    "Sorry, I can only look up one username at a time"
-                )
+                raise InfoGatherError("Sorry, I can only look up one username at a time")
             elif len(u) == 1:
                 mu = await _get_users_by_matrix_id(u[0])
                 return mu
@@ -128,15 +127,14 @@ class Fedora(Plugin):
         self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
         self.bugzillaclient = BugzillaClient("https://bugzilla.redhat.com")
 
-
     async def stop(self) -> None:
         pass
 
     @classmethod
-    def get_config_class(cls) -> Type[BaseProxyConfig]:
+    def get_config_class(cls) -> type[BaseProxyConfig]:
         return Config
 
-    @command.new(name="help", help=f"list commands")
+    @command.new(name="help", help="list commands")
     @command.argument("commandname", pass_raw=True, required=False)
     async def bothelp(self, evt: MessageEvent, commandname: str) -> None:
         """return help"""
@@ -145,7 +143,10 @@ class Fedora(Plugin):
             # return the full help (docstring) for the given command
             for c, commandobject in inspect.getmembers(self):
                 if commandname == c or commandname in ALIASES.get(c, []):
-                    output = f"{commandobject.__mb_full_help__}{NL}{inspect.getdoc(commandobject.__mb_func__)}"
+                    output = (
+                        f"{commandobject.__mb_full_help__}{NL}"
+                        f"{inspect.getdoc(commandobject.__mb_func__)}"
+                    )
                     aliases = ALIASES.get(commandname, []) or ALIASES.get(c, [])
                     if aliases:
                         output = f"{output}{NL}{NL}#### Aliases ####{NL}"
@@ -159,7 +160,7 @@ class Fedora(Plugin):
         else:
             # list all the commands with the help arg from command.new
             output = ""
-            for c, commandobject in inspect.getmembers(self):
+            for _c, commandobject in inspect.getmembers(self):
                 if (
                     isinstance(commandobject, command.CommandHandler)
                     and not commandobject.__mb_parent__
@@ -172,8 +173,8 @@ class Fedora(Plugin):
                         else:
                             arguments = f"{arguments} [{argument.name}]"
                     output = (
-                        output
-                        + f"`!{commandobject.__mb_name__} {arguments}`:: {commandobject.__mb_help__}      \n"
+                        f"{output}`!{commandobject.__mb_name__} {arguments}`:: "
+                        f"{commandobject.__mb_help__}      \n"
                     )
             await evt.respond(output)
 
@@ -191,9 +192,7 @@ class Fedora(Plugin):
     async def group(self, evt: MessageEvent) -> None:
         pass
 
-    @group.subcommand(
-        name="members", help="Return a list of members of the specified group"
-    )
+    @group.subcommand(name="members", help="Return a list of members of the specified group")
     @command.argument("groupname", required=True)
     async def group_members(self, evt: MessageEvent, groupname: str) -> None:
         """
@@ -205,9 +204,7 @@ class Fedora(Plugin):
         # required=True on subcommand arguments doenst seem to work
         # so we do it ourselves
         if not groupname:
-            await evt.respond(
-                "groupname argument is required. e.g. `!group members designteam`"
-            )
+            await evt.respond("groupname argument is required. e.g. `!group members designteam`")
             return
 
         try:
@@ -219,24 +216,16 @@ class Fedora(Plugin):
             return
 
         if len(members) > 200:
-            await evt.respond(
-                f"{groupname} has {len(members)} and thats too much to dump here"
-            )
+            await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
             return
 
-        await evt.respond(
-            f"Members of {groupname}: {', '.join(m['username'] for m in members)}"
-        )
+        await evt.respond(f"Members of {groupname}: {', '.join(m['username'] for m in members)}")
 
-    @group.subcommand(
-        name="sponsors", help="Return a list of owners of the specified group"
-    )
+    @group.subcommand(name="sponsors", help="Return a list of owners of the specified group")
     @command.argument("groupname", required=True)
     async def group_sponsors(self, evt: MessageEvent, groupname: str) -> None:
         if not groupname:
-            await evt.respond(
-                "groupname argument is required. e.g. `!group sponsors designteam`"
-            )
+            await evt.respond("groupname argument is required. e.g. `!group sponsors designteam`")
             return
 
         try:
@@ -247,19 +236,13 @@ class Fedora(Plugin):
             await evt.respond(e.message)
             return
 
-        await evt.respond(
-            f"Sponsors of {groupname}: {', '.join(s['username'] for s in sponsors)}"
-        )
+        await evt.respond(f"Sponsors of {groupname}: {', '.join(s['username'] for s in sponsors)}")
 
-    @group.subcommand(
-        name="info", help="Return a list of owners of the specified group"
-    )
+    @group.subcommand(name="info", help="Return a list of owners of the specified group")
     @command.argument("groupname", required=True)
     async def group_info(self, evt: MessageEvent, groupname: str) -> None:
         if not groupname:
-            await evt.respond(
-                "groupname argument is required. e.g. `!group info designteam`"
-            )
+            await evt.respond("groupname argument is required. e.g. `!group info designteam`")
             return
 
         try:
@@ -277,9 +260,7 @@ class Fedora(Plugin):
             f"**Chat:** {chat_channels}{NL}"
         )
 
-    @command.new(
-        help="Return brief information about a Fedora user.", aliases=ALIASES["hello"]
-    )
+    @command.new(help="Return brief information about a Fedora user.", aliases=ALIASES["hello"])
     @command.argument("username", pass_raw=True, required=False)
     async def hello(self, evt: MessageEvent, username: str) -> None:
         """
@@ -303,9 +284,7 @@ class Fedora(Plugin):
             message += " - " + " or ".join(pronouns)
         await evt.respond(message)
 
-    @command.new(
-        help="Return brief information about a Fedora user.", aliases=ALIASES["user"]
-    )
+    @command.new(help="Return brief information about a Fedora user.", aliases=ALIASES["user"])
     @command.argument("username", pass_raw=True, required=False)
     async def user(self, evt: MessageEvent, username: str) -> None:
         """
@@ -355,21 +334,18 @@ class Fedora(Plugin):
 
         timezone_name = user["timezone"]
         if timezone_name is None:
-            await evt.reply(
-                'User "%s" doesn\'t share their timezone' % user.get("username")
-            )
+            await evt.reply('User "%s" doesn\'t share their timezone' % user.get("username"))
             return
         try:
             time = datetime.datetime.now(pytz.timezone(timezone_name))
         except Exception:
             await evt.reply(
-                'The timezone of "%s" was unknown: "%s"'
-                % (user.get("username"), timezone_name)
+                f'The timezone of "{user.get("username")}" was unknown: "{timezone_name}"'
             )
             return
         await evt.respond(
-            'The current local time of "%s" is: "%s" (timezone: %s)'
-            % (user.get("username"), time.strftime("%H:%M"), timezone_name)
+            f'The current local time of "{user.get("username")}" is: "{time.strftime("%H:%M")}" '
+            f"(timezone: {timezone_name})"
         )
 
     @command.new(help="oncall", require_subcommand=False)
@@ -382,9 +358,7 @@ class Fedora(Plugin):
             output = f"The following people are oncall:{NL}"
             for sysadmin in oncall_sysadmins:
                 timezone = sysadmin.get("timezone", "UTC")
-                currenttime = datetime.datetime.now(pytz.timezone(timezone)).strftime(
-                    "%H:%M"
-                )
+                currenttime = datetime.datetime.now(pytz.timezone(timezone)).strftime("%H:%M")
                 output = output + (
                     f"* { self._format_mxid(sysadmin.get('mxid'))} "
                     f"({sysadmin.get('username')}) Current Time for them: "
@@ -424,9 +398,7 @@ class Fedora(Plugin):
             # Just grab the first mxid in the users list on fas
             mxid = mxids[0]
         try:
-            await self.database.execute(
-                dbq, fasusername, mxid, user.get("timezone", "UTC")
-            )
+            await self.database.execute(dbq, fasusername, mxid, user.get("timezone", "UTC"))
         except UniqueViolationError:
             await evt.respond(f"{fasusername} is already on the oncall list")
             return
@@ -469,9 +441,7 @@ class Fedora(Plugin):
 
         """
         try:
-            packageinfo = await self.paguredistgitclient.get_project(
-                package, namespace="rpms"
-            )
+            packageinfo = await self.paguredistgitclient.get_project(package, namespace="rpms")
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -495,14 +465,13 @@ class Fedora(Plugin):
     @command.argument("bug_id", required=True)
     async def bug(self, evt: MessageEvent, bug_id: str) -> None:
         if not bug_id:
-            await evt.respond(
-                "bug_id argument is required. e.g. `!bug 1234567`"
-            )
+            await evt.respond("bug_id argument is required. e.g. `!bug 1234567`")
             return
         result = await self.bugzillaclient.get_bug(bug_id)
         json = result[0].json()
-        await evt.respond(f"[RHBZ#{bug_id}](https://bugzilla.redhat.com/{bug_id}): {json['bugs'][0]['summary']}")
-
+        await evt.respond(
+            f"[RHBZ#{bug_id}](https://bugzilla.redhat.com/{bug_id}): {json['bugs'][0]['summary']}"
+        )
 
     async def _get_pagure_issue(self, evt: MessageEvent, project: str, issue_id: str) -> None:
         try:
@@ -513,7 +482,6 @@ class Fedora(Plugin):
         title = issue.get("title")
         full_url = issue.get("full_url")
         await evt.respond(f"[{project} #{issue_id}]({full_url}): {title}")
-
 
     @command.new(help="return a pagure issue")
     @command.argument("project", required=True)
@@ -532,9 +500,7 @@ class Fedora(Plugin):
 
     # these were done in supybot / limnoria with the alias plugin. need to find a better way to
     # do this so they can be defined, but for now, lets just define the commands here.
-    @command.new(
-        help="Get a Summary of a ticket from the packaging-committee ticket tracker"
-    )
+    @command.new(help="Get a Summary of a ticket from the packaging-committee ticket tracker")
     @command.argument("issue_id", required=True)
     async def fpc(self, evt: MessageEvent, issue_id: str) -> None:
         """
