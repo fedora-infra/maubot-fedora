@@ -190,6 +190,7 @@ class Fedora(Plugin):
 
     @command.new(help="Query information about Fedora Accounts groups")
     async def group(self, evt: MessageEvent) -> None:
+        """Query information about Fedora groups"""
         pass
 
     @group.subcommand(name="members", help="Return a list of members of the specified group")
@@ -310,7 +311,7 @@ class Fedora(Plugin):
             f"Creation: {user.get('creation')},{NL}"
             f"Timezone: {user.get('timezone')},{NL}"
             f"Locale: {user.get('locale')},{NL}"
-            f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])},{NL}"
+            f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])}{NL}"
         )
 
     @command.new(help="Returns the current time of the user.")
