@@ -12,7 +12,7 @@ class FasjsonClient:
         kwargs["follow_redirects"] = True
         kwargs["auth"] = HTTPSPNEGOAuth()
         async with httpx.AsyncClient() as client:
-            response = await client.get(self.baseurl + endpoint, **kwargs)
+            response = await client.get(self.baseurl + endpoint + '/', **kwargs)
         return response
 
     async def get_group_membership(
