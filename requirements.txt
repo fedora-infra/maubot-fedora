@@ -1,0 +1,6 @@
+asyncpg
+httpx
+httpx_gssapi
+maubot
+mautrix
+pytz
