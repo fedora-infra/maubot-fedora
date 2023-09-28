@@ -1,6 +1,6 @@
-import datetime
 import inspect
 import re
+from datetime import datetime
 
 import pytz
 from asyncpg.exceptions import UniqueViolationError
@@ -337,7 +337,7 @@ class Fedora(Plugin):
             await evt.reply('User "%s" doesn\'t share their timezone' % user.get("username"))
             return
         try:
-            time = datetime.datetime.now(pytz.timezone(timezone_name))
+            time = datetime.now(pytz.timezone(timezone_name))
         except Exception:
             await evt.reply(
                 f'The timezone of "{user.get("username")}" was unknown: "{timezone_name}"'
@@ -358,7 +358,7 @@ class Fedora(Plugin):
             output = f"The following people are oncall:{NL}"
             for sysadmin in oncall_sysadmins:
                 timezone = sysadmin.get("timezone", "UTC")
-                currenttime = datetime.datetime.now(pytz.timezone(timezone)).strftime("%H:%M")
+                currenttime = datetime.now(pytz.timezone(timezone)).strftime("%H:%M")
                 output = output + (
                     f"* { self._format_mxid(sysadmin.get('mxid'))} "
                     f"({sysadmin.get('username')}) Current Time for them: "
