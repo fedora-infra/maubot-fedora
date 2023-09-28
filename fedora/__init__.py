@@ -468,9 +468,8 @@ class Fedora(Plugin):
             await evt.respond("bug_id argument is required. e.g. `!bug 1234567`")
             return
         result = await self.bugzillaclient.get_bug(bug_id)
-        json = result[0].json()
         await evt.respond(
-            f"[RHBZ#{bug_id}](https://bugzilla.redhat.com/{bug_id}): {json['bugs'][0]['summary']}"
+            f"[RHBZ#{bug_id}](https://bugzilla.redhat.com/{bug_id}): {result['bugs'][0]['summary']}"
         )
 
     async def _get_pagure_issue(self, evt: MessageEvent, project: str, issue_id: str) -> None:
