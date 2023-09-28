@@ -1,0 +1,8 @@
+maubot
+black
+ruff
+pytest
+pytest-asyncio
+pytest-cov
+coverage[toml]
+respx
