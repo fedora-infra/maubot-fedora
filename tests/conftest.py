@@ -1,10 +1,12 @@
 import asyncio
+import logging
 from pathlib import Path
 
 import aiohttp
 import pytest_asyncio
 from maubot.loader import PluginMeta
 from maubot.standalone.loader import FileSystemLoader
+from mautrix.util.async_db import Database
 from mautrix.util.config import RecursiveDict
 from mautrix.util.logging import TraceLogger
 from ruamel.yaml import YAML
@@ -20,7 +22,20 @@ async def bot():
 
 
 @pytest_asyncio.fixture
-async def plugin(bot):
+async def db(tmp_path):
+    db_path = tmp_path.joinpath("tests.db").as_posix()
+    db = Database.create(
+        f"sqlite:///{db_path}",
+        upgrade_table=Fedora.get_db_upgrade_table(),
+        log=logging.getLogger("db"),
+    )
+    await db.start()
+    yield db
+    await db.stop()
+
+
+@pytest_asyncio.fixture
+async def plugin(bot, db):
     base_path = Path(__file__).parent.parent
     yaml = YAML()
     with open(base_path.joinpath("maubot.yaml")) as fh:
@@ -43,7 +58,7 @@ async def plugin(bot):
             instance_id="tests",
             log=TraceLogger("test"),
             config=config,
-            database=None,
+            database=db,
             webapp=None,
             webapp_url=None,
             loader=loader,
