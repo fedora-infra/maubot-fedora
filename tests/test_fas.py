@@ -58,12 +58,41 @@ async def test_hello(bot, plugin, respx_mock, pronouns):
             },
         )
     )
+    # User hasn't set their matrix ID in FAS
+    respx_mock.get(
+        "http://fasjson.example.com/v1/search/users/",
+        params={"ircnick__exact": "matrix://example.com/dummy"},
+    ).mock(return_value=httpx.Response(200, json={"result": []}))
+
     await bot.send("!hello")
     assert len(bot.sent) == 1
     expected = "Dummy User (dummy)"
     if pronouns:
         expected = f"{expected} - {' or '.join(pronouns)}"
     assert bot.sent[0].content.body == expected
+
+
+async def test_hello_with_username(bot, plugin, respx_mock):
+    respx_mock.get("http://fasjson.example.com/v1/users/dummy2/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "result": {
+                    "username": "dummy2",
+                    "human_name": "Dummy User 2",
+                }
+            },
+        )
+    )
+    # User hasn't set their matrix ID in FAS
+    respx_mock.get(
+        "http://fasjson.example.com/v1/search/users/",
+        params={"ircnick__exact": "matrix://example.com/dummy"},
+    ).mock(return_value=httpx.Response(200, json={"result": []}))
+
+    await bot.send("!hello dummy2")
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "Dummy User 2 (dummy2)"
 
 
 async def test_localtime(bot, plugin, respx_mock, monkeypatch):

@@ -1,91 +1,20 @@
-import re
+import logging
 from datetime import datetime
 
 import pytz
 from maubot import MessageEvent
 from maubot.handlers import command
 
-from .clients.fasjson import FasjsonClient
 from .constants import ALIASES, NL
 from .exceptions import InfoGatherError
+from .utils import get_fasuser
+
+log = logging.getLogger(__name__)
 
 
 class FasHandler:
-    def __init__(self, config):
-        self.config = config
-        self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
-
-    async def _get_fasuser(self, username: str, evt: MessageEvent):
-        async def _get_users_by_matrix_id(username: str) -> dict | str:
-            """looks up a user by the matrix id"""
-
-            # Fedora Accounts stores these strangly but this is to handle that
-            try:
-                matrix_username, matrix_server = re.findall(r"@(.*):(.*)", username)[0]
-            except (ValueError, IndexError) as e:
-                raise InfoGatherError(
-                    f"Sorry, {username} does not look like a valid matrix user ID "
-                    "(e.g. @username:homeserver.com )"
-                ) from e
-
-            # if given a fedora.im address -- just look up the username as a FAS name
-            if matrix_server == "fedora.im":
-                user = await self.fasjsonclient.get_user(matrix_username)
-                return user
-
-            searchterm = f"matrix://{matrix_server}/{matrix_username}"
-            searchresult = await self.fasjsonclient.search_users(
-                params={"ircnick__exact": searchterm}
-            )
-
-            if len(searchresult) > 1:
-                names = f"{NL}".join([name["username"] for name in searchresult])
-                raise InfoGatherError(
-                    f"{len(searchresult)} Fedora Accounts users have the {username} "
-                    f"Matrix Account defined:{NL}"
-                    f"{names}"
-                )
-            elif len(searchresult) == 0:
-                raise InfoGatherError(
-                    f"No Fedora Accounts users have the {username} Matrix Account defined"
-                )
-
-            return searchresult[0]
-
-        # if no username is supplied, we use the matrix id of the sender
-        # (e.g. "@dudemcpants:fedora.im")
-        if not username:
-            username = evt.sender
-
-        # check if the formatted message has mentions (ie the user has tab-completed on someones
-        # name) in them
-        if evt.content.formatted_body:
-            # in element at least, when usernames are mentioned, they are formatted like:
-            # <a href="https://matrix.to/#/@zodbot:fedora.im">zodbot</a>
-            # here we check the formatted message and extract all the matrix user IDs
-            u = re.findall(
-                r'href=[\'"]?http[s]?://matrix.to/#/([^\'" >]+)',
-                evt.content.formatted_body,
-            )
-            if len(u) > 1:
-                raise InfoGatherError("Sorry, I can only look up one username at a time")
-            elif len(u) == 1:
-                mu = await _get_users_by_matrix_id(u[0])
-                return mu
-
-        usernames = username.split(" ")
-        if len(usernames) > 1:
-            raise InfoGatherError("Sorry, I can only look up one username at a time")
-
-        # else check if the username given is a matrix id (@<username>:<server.com>)
-        if re.search(r"@.*:.*", usernames[0]):
-            musers = await _get_users_by_matrix_id(usernames[0])
-            return musers
-
-        # finally, assume we were given a FAS / Fedora Account ID and use that
-        else:
-            user = await self.fasjsonclient.get_user(usernames[0])
-            return user
+    def __init__(self, fasjsonclient):
+        self.fasjsonclient = fasjsonclient
 
     @command.new(help="Query information about Fedora Accounts groups")
     async def group(self, evt: MessageEvent) -> None:
@@ -174,9 +103,12 @@ class FasHandler:
 
         """
         try:
-            user = await self._get_fasuser(username, evt)
+            user = await get_fasuser(username, evt, self.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
+            return
+        if user is None:
+            await evt.respond(f"Cound not find this Fedora Account: {username}")
             return
 
         message = f"{user['human_name']} ({user['username']})"
@@ -198,7 +130,7 @@ class FasHandler:
 
         """
         try:
-            user = await self._get_fasuser(username, evt)
+            user = await get_fasuser(username, evt, self.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -227,7 +159,7 @@ class FasHandler:
 
         """
         try:
-            user = await self._get_fasuser(username, evt)
+            user = await get_fasuser(username, evt, self.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return

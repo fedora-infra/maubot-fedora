@@ -1,4 +1,6 @@
+import logging
 from datetime import datetime
+from sqlite3 import IntegrityError
 
 import pytz
 from asyncpg.exceptions import UniqueViolationError
@@ -7,12 +9,16 @@ from maubot.handlers import command
 
 from .constants import NL
 from .exceptions import InfoGatherError
+from .utils import get_fasuser, get_rowcount
+
+log = logging.getLogger(__name__)
 
 
 class OnCallHandler:
-    def __init__(self, config, database):
+    def __init__(self, config, database, fasjsonclient):
         self.config = config
         self.database = database
+        self.fasjsonclient = fasjsonclient
 
     def _format_mxid(self, mxid, name=None):
         return f'<a href="https://matrix.to/#/{mxid}">{name if name else mxid}</a>'
@@ -62,7 +68,7 @@ class OnCallHandler:
             )
             return
         try:
-            user = await self._get_fasuser(username, evt)
+            user = await get_fasuser(username, evt, self.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -80,10 +86,10 @@ class OnCallHandler:
             mxid = mxids[0]
         try:
             await self.database.execute(dbq, fasusername, mxid, user.get("timezone", "UTC"))
-        except UniqueViolationError:
+        except (UniqueViolationError, IntegrityError):
             await evt.respond(f"{fasusername} is already on the oncall list")
             return
-        await evt.respond(f"{fasusername} is has been added to the oncall list")
+        await evt.respond(f"{fasusername} has been added to the oncall list")
 
     @oncall.subcommand(name="remove", help="Remove a user to the current oncall list")
     @command.argument("username", pass_raw=True, required=True)
@@ -94,7 +100,7 @@ class OnCallHandler:
             )
             return
         try:
-            user = await self._get_fasuser(username, evt)
+            user = await get_fasuser(username, evt, self.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -103,9 +109,10 @@ class OnCallHandler:
                 DELETE FROM oncall WHERE username = $1
               """
         result = await self.database.execute(dbq, user["username"])
-        if result == "DELETE 0":
+        rowcount = get_rowcount(self.database, result)
+        if rowcount == 0:
             await evt.reply(f"{user['username']} is not currently on the oncall list")
-        elif result == "DELETE 1":
+        elif rowcount == 1:
             await evt.reply(f"{user['username']} has been removed from the oncall list")
         else:
             await evt.reply(f"Unexpected response trying to remove user: {result}")

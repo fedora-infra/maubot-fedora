@@ -7,6 +7,7 @@ from mautrix.util.async_db import UpgradeTable
 from mautrix.util.config import BaseProxyConfig
 
 from .bugzilla import BugzillaHandler
+from .clients.fasjson import FasjsonClient
 from .config import Config
 from .constants import ALIASES, NL
 from .db import upgrade_table
@@ -25,11 +26,12 @@ class Fedora(Plugin):
 
     async def start(self) -> None:
         self.config.load_and_update()
+        self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
         self.register_handler_class(PagureIOHandler(self.config))
         self.register_handler_class(DistGitHandler(self.config))
-        self.register_handler_class(FasHandler(self.config))
+        self.register_handler_class(FasHandler(self.fasjsonclient))
         self.register_handler_class(BugzillaHandler(self.config))
-        self.register_handler_class(OnCallHandler(self.config, self.database))
+        self.register_handler_class(OnCallHandler(self.config, self.database, self.fasjsonclient))
 
     async def stop(self) -> None:
         pass

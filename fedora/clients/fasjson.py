@@ -1,6 +1,7 @@
 import httpx
 from httpx_gssapi import HTTPSPNEGOAuth
 
+from ..constants import MATRIX_USER_RE, NL
 from ..exceptions import InfoGatherError
 
 
@@ -44,3 +45,37 @@ class FasjsonClient:
         """looks up a group by the groupname"""
         response = await self._get("/".join(["search", "users"]), params=params)
         return response.json().get("result")
+
+    async def get_users_by_matrix_id(self, matrix_id: str) -> dict | str:
+        """looks up a user by the matrix id"""
+
+        # Fedora Accounts stores these strangly but this is to handle that
+        try:
+            matrix_username, matrix_server = MATRIX_USER_RE.findall(matrix_id)[0]
+        except (ValueError, IndexError) as e:
+            raise InfoGatherError(
+                f"Sorry, {matrix_id} does not look like a valid matrix user ID "
+                "(e.g. @username:homeserver.com )"
+            ) from e
+
+        # if given a fedora.im address -- just look up the username as a FAS name
+        if matrix_server == "fedora.im":
+            user = await self.get_user(matrix_username)
+            return user
+
+        searchterm = f"matrix://{matrix_server}/{matrix_username}"
+        searchresult = await self.search_users(params={"ircnick__exact": searchterm})
+
+        if len(searchresult) > 1:
+            names = f"{NL}".join([name["username"] for name in searchresult])
+            raise InfoGatherError(
+                f"{len(searchresult)} Fedora Accounts users have the {matrix_id} "
+                f"Matrix Account defined:{NL}"
+                f"{names}"
+            )
+        elif len(searchresult) == 0:
+            raise InfoGatherError(
+                f"No Fedora Accounts users have the {matrix_id} Matrix Account defined"
+            )
+
+        return searchresult[0]
