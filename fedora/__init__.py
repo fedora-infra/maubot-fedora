@@ -27,11 +27,11 @@ class Fedora(Plugin):
     async def start(self) -> None:
         self.config.load_and_update()
         self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
-        self.register_handler_class(PagureIOHandler(self.config))
-        self.register_handler_class(DistGitHandler(self.config))
-        self.register_handler_class(FasHandler(self.fasjsonclient))
-        self.register_handler_class(BugzillaHandler(self.config))
-        self.register_handler_class(OnCallHandler(self.config, self.database, self.fasjsonclient))
+        self.register_handler_class(PagureIOHandler(self))
+        self.register_handler_class(DistGitHandler(self))
+        self.register_handler_class(FasHandler(self))
+        self.register_handler_class(BugzillaHandler(self))
+        self.register_handler_class(OnCallHandler(self))
 
     async def stop(self) -> None:
         pass
