@@ -18,7 +18,7 @@ async def test_help(bot, plugin):
         "● `!whoowns <package>` - Retrieve the owner of a given package\n"
         "● `!group  <subcommand> [...]` - Query information about Fedora Accounts groups\n"
         "● `!hello [username]` - Return brief information about a Fedora user.\n"
-        "● `!localtime [username]` - Returns the current time of the user.\n"
+        "● `!localtime <username>` - Returns the current time of the user.\n"
         "● `!user [username]` - Return brief information about a Fedora user.\n"
         "● `!bug <bug_id>` - return a bugzilla bug\n"
         "● `!oncall  <subcommand> [...]` - oncall"

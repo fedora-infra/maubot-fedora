@@ -30,6 +30,44 @@ async def test_oncall_add(bot, plugin, db, respx_mock):
     assert current_value[0]["mxid"] == "@dummymx:example.com"
 
 
+async def test_oncall_add_empty(bot, plugin, db, respx_mock):
+    respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "result": {
+                    "username": "dummy",
+                    "ircnicks": ["irc:///dummyirc", "matrix://example.com/dummy"],
+                }
+            },
+        )
+    )
+    respx_mock.get(
+        "http://fasjson.example.com/v1/search/users/",
+        params={"ircnick__exact": "matrix://example.com/dummy"},
+    ).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "result": [
+                    {
+                        "username": "dummy",
+                        "ircnicks": ["irc:///dummyirc", "matrix://example.com/dummy"],
+                    }
+                ]
+            },
+        )
+    )
+    await bot.send("!oncall add", room_id="controlroom")
+    assert len(bot.sent) == 1
+    expected = "dummy has been added to the oncall list"
+    assert bot.sent[0].content.body == expected
+    current_value = await db.fetch("SELECT * FROM oncall")
+    assert len(current_value) == 1
+    assert current_value[0]["username"] == "dummy"
+    assert current_value[0]["mxid"] == "@dummy:example.com"
+
+
 async def test_oncall_add_wrong_room(bot, plugin, db):
     await bot.send("!oncall add dummy")
     assert len(bot.sent) == 1

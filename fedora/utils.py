@@ -40,11 +40,6 @@ def matrix_id_to_username(matrix_id):
 
 
 async def get_fasuser(username: str, evt: MessageEvent, fasjson: FasjsonClient):
-    # if no username is supplied, we use the matrix id of the sender
-    # (e.g. "@dudemcpants:fedora.im")
-    if not username:
-        username = evt.sender
-
     matrix_id = get_matrix_id(username, evt)
     if matrix_id:
         try:

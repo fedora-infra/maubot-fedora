@@ -64,7 +64,7 @@ class OnCallHandler(Handler):
             )
             return
         try:
-            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
+            user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -96,7 +96,7 @@ class OnCallHandler(Handler):
             )
             return
         try:
-            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
+            user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
