@@ -10,6 +10,7 @@ from .bugzilla import BugzillaHandler
 from .clients.fasjson import FasjsonClient
 from .config import Config
 from .constants import ALIASES, NL
+from .cookie import CookieHandler
 from .db import upgrade_table
 from .distgit import DistGitHandler
 from .fas import FasHandler
@@ -32,6 +33,7 @@ class Fedora(Plugin):
         self.register_handler_class(FasHandler(self))
         self.register_handler_class(BugzillaHandler(self))
         self.register_handler_class(OnCallHandler(self))
+        self.register_handler_class(CookieHandler(self))
 
     async def stop(self) -> None:
         pass
