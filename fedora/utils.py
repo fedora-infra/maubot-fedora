@@ -1,6 +1,7 @@
 import re
 
 from maubot import MessageEvent
+from mautrix.util.async_db import Scheme
 
 from .clients.fasjson import FasjsonClient
 from .constants import FAS_MATRIX_DOMAINS, MATRIX_USER_RE
@@ -57,7 +58,7 @@ async def get_fasuser(username: str, evt: MessageEvent, fasjson: FasjsonClient):
 
 
 def get_rowcount(db, result):
-    if db.url.scheme.startswith("postgres"):
+    if db.scheme == Scheme.POSTGRES:
         return int(result.split(" ")[-1])
     else:
         return result.rowcount

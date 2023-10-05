@@ -1,13 +1,12 @@
 import logging
 from datetime import datetime
-from sqlite3 import IntegrityError
 
 import pytz
-from asyncpg.exceptions import UniqueViolationError
 from maubot import MessageEvent
 from maubot.handlers import command
 
 from .constants import NL
+from .db import UNIQUE_ERROR
 from .exceptions import InfoGatherError
 from .handler import Handler
 from .utils import get_fasuser, get_rowcount
@@ -82,7 +81,7 @@ class OnCallHandler(Handler):
             mxid = mxids[0]
         try:
             await self.plugin.database.execute(dbq, fasusername, mxid, user.get("timezone", "UTC"))
-        except (UniqueViolationError, IntegrityError):
+        except UNIQUE_ERROR:
             await evt.respond(f"{fasusername} is already on the oncall list")
             return
         await evt.respond(f"{fasusername} has been added to the oncall list")
