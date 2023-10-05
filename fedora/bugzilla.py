@@ -2,11 +2,12 @@ from maubot import MessageEvent
 from maubot.handlers import command
 
 from .clients.bugzilla import BugzillaClient
+from .handler import Handler
 
 
-class BugzillaHandler:
-    def __init__(self, config):
-        self.config = config
+class BugzillaHandler(Handler):
+    def __init__(self, plugin):
+        super().__init__(plugin)
         self.bugzillaclient = BugzillaClient("https://bugzilla.redhat.com")
 
     @command.new(help="return a bugzilla bug")

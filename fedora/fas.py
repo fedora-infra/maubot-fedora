@@ -7,15 +7,13 @@ from maubot.handlers import command
 
 from .constants import ALIASES, NL
 from .exceptions import InfoGatherError
+from .handler import Handler
 from .utils import get_fasuser
 
 log = logging.getLogger(__name__)
 
 
-class FasHandler:
-    def __init__(self, fasjsonclient):
-        self.fasjsonclient = fasjsonclient
-
+class FasHandler(Handler):
     @command.new(help="Query information about Fedora Accounts groups")
     async def group(self, evt: MessageEvent) -> None:
         """Query information about Fedora groups"""
@@ -37,7 +35,7 @@ class FasHandler:
             return
 
         try:
-            members = await self.fasjsonclient.get_group_membership(
+            members = await self.plugin.fasjsonclient.get_group_membership(
                 groupname, membership_type="members"
             )
         except InfoGatherError as e:
@@ -58,7 +56,7 @@ class FasHandler:
             return
 
         try:
-            sponsors = await self.fasjsonclient.get_group_membership(
+            sponsors = await self.plugin.fasjsonclient.get_group_membership(
                 groupname, membership_type="sponsors"
             )
         except InfoGatherError as e:
@@ -75,7 +73,7 @@ class FasHandler:
             return
 
         try:
-            group = await self.fasjsonclient.get_group(groupname)
+            group = await self.plugin.fasjsonclient.get_group(groupname)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -103,7 +101,7 @@ class FasHandler:
 
         """
         try:
-            user = await get_fasuser(username, evt, self.fasjsonclient)
+            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -130,7 +128,7 @@ class FasHandler:
 
         """
         try:
-            user = await get_fasuser(username, evt, self.fasjsonclient)
+            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -159,7 +157,7 @@ class FasHandler:
 
         """
         try:
-            user = await get_fasuser(username, evt, self.fasjsonclient)
+            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return

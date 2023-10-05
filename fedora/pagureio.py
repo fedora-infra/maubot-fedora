@@ -3,12 +3,13 @@ from maubot.handlers import command
 
 from .clients.pagure import PagureClient
 from .exceptions import InfoGatherError
+from .handler import Handler
 
 
-class PagureIOHandler:
-    def __init__(self, config):
-        self.config = config
-        self.pagureioclient = PagureClient(self.config["pagureio_url"])
+class PagureIOHandler(Handler):
+    def __init__(self, plugin):
+        super().__init__(plugin)
+        self.pagureioclient = PagureClient(self.plugin.config["pagureio_url"])
 
     async def _get_pagure_issue(self, evt: MessageEvent, project: str, issue_id: str) -> None:
         try:

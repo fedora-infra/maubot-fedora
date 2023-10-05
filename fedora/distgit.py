@@ -4,12 +4,13 @@ from maubot.handlers import command
 from .clients.pagure import PagureClient
 from .constants import NL
 from .exceptions import InfoGatherError
+from .handler import Handler
 
 
-class DistGitHandler:
-    def __init__(self, config):
-        self.config = config
-        self.paguredistgitclient = PagureClient(self.config["paguredistgit_url"])
+class DistGitHandler(Handler):
+    def __init__(self, plugin):
+        super().__init__(plugin)
+        self.paguredistgitclient = PagureClient(self.plugin.config["paguredistgit_url"])
 
     @command.new(help="Retrieve the owner of a given package")
     @command.argument("package", required=True)
