@@ -9,7 +9,6 @@ from .bot import make_message
 @pytest.mark.parametrize(
     "username,mention,expected",
     [
-        ("", None, "dummy"),
         ("dummy", None, "dummy"),
         ("dummy2", None, "dummy2"),
         ("@dummy:example.com", None, "dummy"),

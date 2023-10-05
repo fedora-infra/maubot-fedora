@@ -101,7 +101,7 @@ class FasHandler(Handler):
 
         """
         try:
-            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
+            user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -128,7 +128,7 @@ class FasHandler(Handler):
 
         """
         try:
-            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
+            user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -144,7 +144,7 @@ class FasHandler(Handler):
         )
 
     @command.new(help="Returns the current time of the user.")
-    @command.argument("username", pass_raw=True, required=False)
+    @command.argument("username", pass_raw=True, required=True)
     async def localtime(self, evt: MessageEvent, username: str) -> None:
         """
         Returns the current time of the user.
