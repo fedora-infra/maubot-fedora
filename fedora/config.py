@@ -6,4 +6,5 @@ class Config(BaseProxyConfig):
         helper.copy("fasjson_url")
         helper.copy("pagureio_url")
         helper.copy("paguredistgit_url")
+        helper.copy("bodhi_url")
         helper.copy("controlroom")

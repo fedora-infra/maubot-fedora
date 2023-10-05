@@ -1,4 +1,5 @@
 import asyncio
+import time
 from dataclasses import dataclass
 
 from maubot.matrix import MaubotMatrixClient, MaubotMessageEvent
@@ -33,20 +34,22 @@ class TestBot(MaubotMatrixClient):
             SentEvent(room_id=room_id, event_type=event_type, content=content, kwargs=kwargs)
         )
 
-    async def send(self, content, room_id="testroom"):
-        event = make_message(content, room_id)
+    async def send(self, content, html=None, room_id="testroom"):
+        event = make_message(content, html=html, room_id=room_id)
         tasks = self.client.dispatch_manual_event(
             EventType.ROOM_MESSAGE, MaubotMessageEvent(event, self.client), force_synchronous=True
         )
         return await asyncio.gather(*tasks)
 
 
-def make_message(content, room_id="testroom"):
+def make_message(content, html=None, room_id="testroom"):
     return MessageEvent(
         type=EventType.ROOM_MESSAGE,
         room_id=room_id,
         event_id="test",
         sender="@dummy:example.com",
-        timestamp=0,
-        content=TextMessageEventContent(msgtype=MessageType.TEXT, body=content),
+        timestamp=int(time.time()),
+        content=TextMessageEventContent(
+            msgtype=MessageType.TEXT, body=content, formatted_body=html
+        ),
     )
