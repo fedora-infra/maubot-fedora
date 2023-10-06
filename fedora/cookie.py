@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 
 from maubot import MessageEvent
 from maubot.handlers import event
@@ -63,7 +63,7 @@ class CookieHandler(Handler):
         if to_user is None:
             raise InfoGatherError(f"Could not find user {username} in the Fedora Account system.")
         current_release = await self.bodhi.get_current_release()
-        current_release = int(current_release["version"])
+        current_release = str(current_release["version"])
         dbq = """
             INSERT INTO cookies (from_user, to_user, release, date)
             VALUES ($1, $2, $3, $4)
@@ -74,7 +74,7 @@ class CookieHandler(Handler):
                 from_user["username"],
                 to_user["username"],
                 current_release,
-                datetime.fromtimestamp(evt.timestamp / 1000, tz=timezone.utc),
+                datetime.fromtimestamp(evt.timestamp / 1000),
             )
         except UNIQUE_ERROR:
             await evt.respond(
