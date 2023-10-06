@@ -36,53 +36,44 @@ class FasHandler(Handler):
         """Query information about Fedora groups"""
         pass
 
-    @group.subcommand(name="members", help="Return a list of members of the specified group")
-    @command.argument("groupname", required=True)
-    async def group_members(self, evt: MessageEvent, groupname: str) -> None:
+    async def _list_members(self, evt: MessageEvent, groupname: str, membership_type: str) -> None:
         """
-        Return a list of the members of the Fedora Accounts group
+        Return a list of the members or sponsors of the Fedora Accounts group
 
         ## Arguments ##
         `groupname`: (required) The name of the Fedora Accounts group
+        `membership_type`: (required) `members` or `sponsors`
         """
-        # required=True on subcommand arguments doenst seem to work
-        # so we do it ourselves
         if not groupname:
             await evt.respond("groupname argument is required. e.g. `!group members designteam`")
             return
 
         try:
-            members = await self.plugin.fasjsonclient.get_group_membership(
-                groupname, membership_type="members"
+            users = await self.plugin.fasjsonclient.get_group_membership(
+                groupname, membership_type=membership_type
             )
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
 
-        if len(members) > 200:
-            await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
+        if len(users) > 200:
+            await evt.respond(
+                f"{groupname} has {len(users)} {membership_type} and thats too many to dump here"
+            )
             return
 
-        mentions = await self._get_mentions(members, evt)
-        await evt.respond(f"Members of {groupname}: {', '.join(mentions)}")
+        mentions = await self._get_mentions(users, evt)
+        await evt.respond(f"{membership_type.title()} of {groupname}: {', '.join(mentions)}")
+
+    @group.subcommand(name="members", help="Return a list of members of the specified group")
+    @command.argument("groupname", required=True)
+    async def group_members(self, evt: MessageEvent, groupname: str) -> None:
+        await self._list_members(evt, groupname, "members")
 
     @group.subcommand(name="sponsors", help="Return a list of owners of the specified group")
     @command.argument("groupname", required=True)
     async def group_sponsors(self, evt: MessageEvent, groupname: str) -> None:
-        if not groupname:
-            await evt.respond("groupname argument is required. e.g. `!group sponsors designteam`")
-            return
-
-        try:
-            sponsors = await self.plugin.fasjsonclient.get_group_membership(
-                groupname, membership_type="sponsors"
-            )
-        except InfoGatherError as e:
-            await evt.respond(e.message)
-            return
-
-        mentions = await self._get_mentions(sponsors, evt)
-        await evt.respond(f"Sponsors of {groupname}: {', '.join(mentions)}")
+        await self._list_members(evt, groupname, "sponsors")
 
     @group.subcommand(name="info", help="Return a list of owners of the specified group")
     @command.argument("groupname", required=True)
