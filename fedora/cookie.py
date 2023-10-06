@@ -30,7 +30,7 @@ class CookieHandler(Handler):
     async def handle(self, evt: MessageEvent) -> None:
         if evt.content.msgtype not in [MessageType.TEXT, MessageType.NOTICE]:
             return
-        if evt.sender == self.plugin.client.mxid:
+        if evt.sender == evt.client.mxid:
             # The bot sent this message
             return
         username = self._get_username(evt)
