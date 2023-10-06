@@ -1,6 +1,7 @@
 import asyncio
 import time
 from dataclasses import dataclass
+from unittest import mock
 
 from maubot.matrix import MaubotMatrixClient, MaubotMessageEvent
 from mautrix.api import HTTPAPI
@@ -28,6 +29,7 @@ class TestBot(MaubotMatrixClient):
         self.client = MaubotMatrixClient(api=api)
         self.sent = []
         self.client.send_message_event = self._mock_send_message_event
+        self.client.send_receipt = mock.AsyncMock()
 
     async def _mock_send_message_event(self, room_id, event_type, content, txn_id=None, **kwargs):
         self.sent.append(

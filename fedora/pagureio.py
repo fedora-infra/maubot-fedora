@@ -12,6 +12,7 @@ class PagureIOHandler(Handler):
         self.pagureioclient = PagureClient(self.plugin.config["pagureio_url"])
 
     async def _get_pagure_issue(self, evt: MessageEvent, project: str, issue_id: str) -> None:
+        await evt.mark_read()
         try:
             issue = await self.pagureioclient.get_issue(project, issue_id)
         except InfoGatherError as e:

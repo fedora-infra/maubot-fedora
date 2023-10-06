@@ -48,6 +48,8 @@ class FasHandler(Handler):
             await evt.respond("groupname argument is required. e.g. `!group members designteam`")
             return
 
+        await evt.mark_read()
+
         try:
             users = await self.plugin.fasjsonclient.get_group_membership(
                 groupname, membership_type=membership_type
@@ -82,6 +84,7 @@ class FasHandler(Handler):
             await evt.respond("groupname argument is required. e.g. `!group info designteam`")
             return
 
+        await evt.mark_read()
         try:
             group = await self.plugin.fasjsonclient.get_group(groupname)
         except InfoGatherError as e:
@@ -110,6 +113,7 @@ class FasHandler(Handler):
            (e.g. @username:fedora.im)
 
         """
+        await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
@@ -137,6 +141,7 @@ class FasHandler(Handler):
            (e.g. @username:fedora.im)
 
         """
+        await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
@@ -166,6 +171,7 @@ class FasHandler(Handler):
            (e.g. @username:fedora.im)
 
         """
+        await evt.mark_read()
         try:
             user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:

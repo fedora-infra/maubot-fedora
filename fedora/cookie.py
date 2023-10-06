@@ -36,6 +36,7 @@ class CookieHandler(Handler):
         username = self._get_username(evt)
         if not username:
             return
+        await evt.mark_read()
         try:
             await self.give(evt, username)
         except InfoGatherError as e:

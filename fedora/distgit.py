@@ -23,6 +23,7 @@ class DistGitHandler(Handler):
         * `package`: A Fedora package name
 
         """
+        await evt.mark_read()
         try:
             packageinfo = await self.paguredistgitclient.get_project(package, namespace="rpms")
         except InfoGatherError as e:

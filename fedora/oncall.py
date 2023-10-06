@@ -20,6 +20,7 @@ class OnCallHandler(Handler):
 
     @command.new(help="oncall", require_subcommand=False)
     async def oncall(self, evt: MessageEvent) -> None:
+        await evt.mark_read()
         dbq = """
                 SELECT * FROM oncall
             """
@@ -50,6 +51,7 @@ class OnCallHandler(Handler):
                 "Sorry, adding to the oncall list can only be done from the controlroom"
             )
             return
+        await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
@@ -82,6 +84,7 @@ class OnCallHandler(Handler):
                 "Sorry, removing from the oncall list can only be done from the controlroom"
             )
             return
+        await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
