@@ -8,12 +8,29 @@ from maubot.handlers import command
 from .constants import ALIASES, NL
 from .exceptions import InfoGatherError
 from .handler import Handler
-from .utils import get_fasuser
+from .utils import get_fasuser, matrix_ids_from_ircnicks, tag_user
 
 log = logging.getLogger(__name__)
 
 
 class FasHandler(Handler):
+    async def _get_mentions(self, users, evt: MessageEvent):
+        room_members = set((await evt.client.get_joined_members(evt.room_id)).keys())
+        mentions = []
+        for user in sorted(users, key=lambda u: u["username"]):
+            mxids = matrix_ids_from_ircnicks(user.get("ircnicks", []))
+            if len(mxids) == 0:
+                mention = user["username"]
+            elif len(mxids) == 1:
+                mention = tag_user(mxids[0], user.get("human_name", user["username"]))
+            elif len(set(mxids).intersection(room_members)) == 1:
+                mxid = next(iter(set(mxids).intersection(room_members)))
+                mention = tag_user(mxid, user.get("human_name", user["username"]))
+            else:
+                mention = f"{user['username']} ({', '.join(tag_user(mxid) for mxid in mxids)})"
+            mentions.append(mention)
+        return mentions
+
     @command.new(help="Query information about Fedora Accounts groups")
     async def group(self, evt: MessageEvent) -> None:
         """Query information about Fedora groups"""
@@ -46,7 +63,8 @@ class FasHandler(Handler):
             await evt.respond(f"{groupname} has {len(members)} and thats too much to dump here")
             return
 
-        await evt.respond(f"Members of {groupname}: {', '.join(m['username'] for m in members)}")
+        mentions = await self._get_mentions(members, evt)
+        await evt.respond(f"Members of {groupname}: {', '.join(mentions)}")
 
     @group.subcommand(name="sponsors", help="Return a list of owners of the specified group")
     @command.argument("groupname", required=True)
@@ -63,7 +81,8 @@ class FasHandler(Handler):
             await evt.respond(e.message)
             return
 
-        await evt.respond(f"Sponsors of {groupname}: {', '.join(s['username'] for s in sponsors)}")
+        mentions = await self._get_mentions(sponsors, evt)
+        await evt.respond(f"Sponsors of {groupname}: {', '.join(mentions)}")
 
     @group.subcommand(name="info", help="Return a list of owners of the specified group")
     @command.argument("groupname", required=True)

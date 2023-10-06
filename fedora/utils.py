@@ -62,3 +62,20 @@ def get_rowcount(db, result):
         return int(result.split(" ")[-1])
     else:
         return result.rowcount
+
+
+def matrix_ids_from_ircnicks(ircnicks):
+    mxids = []
+    for nick in ircnicks or []:
+        if nick.startswith("matrix://"):
+            # should be "matrix://matrix.org/username"
+            m = nick.replace("matrix://", "").split("/")
+            # m should be ['matrix.org', "username"]
+            mxids.append(f"@{m[1]}:{m[0]}")
+        elif nick.startswith("matrix:/"):
+            mxids.append(f"{nick.replace('matrix:/', '@')}:fedora.im")
+    return mxids
+
+
+def tag_user(mxid, name=None):
+    return f"[{name or mxid}](https://matrix.to/#/{mxid})"

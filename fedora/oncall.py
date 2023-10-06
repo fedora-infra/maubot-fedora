@@ -9,7 +9,7 @@ from .constants import NL
 from .db import UNIQUE_ERROR
 from .exceptions import InfoGatherError
 from .handler import Handler
-from .utils import get_fasuser, get_rowcount
+from .utils import get_fasuser, get_rowcount, matrix_ids_from_ircnicks
 
 log = logging.getLogger(__name__)
 
@@ -17,18 +17,6 @@ log = logging.getLogger(__name__)
 class OnCallHandler(Handler):
     def _format_mxid(self, mxid, name=None):
         return f'<a href="https://matrix.to/#/{mxid}">{name if name else mxid}</a>'
-
-    def _mxids_from_ircnicks(self, ircnicks):
-        mxids = []
-        for nick in ircnicks:
-            if nick.startswith("matrix://"):
-                # should be "matrix://matrix.org/username"
-                m = nick.replace("matrix://", "").split("/")
-                # m should be ['matrix.org', "username"]
-                mxids.append(f"@{m[1]}:{m[0]}")
-            elif nick.startswith("matrix:/"):
-                mxids.append(f"{nick.replace('matrix:/', '@')}:fedora.im")
-        return mxids
 
     @command.new(help="oncall", require_subcommand=False)
     async def oncall(self, evt: MessageEvent) -> None:
@@ -72,7 +60,7 @@ class OnCallHandler(Handler):
                 INSERT INTO oncall (username, mxid, timezone) VALUES ($1, $2, $3)
             """
         fasusername = user.get("username")
-        mxids = self._mxids_from_ircnicks(user.get("ircnicks", []))
+        mxids = matrix_ids_from_ircnicks(user.get("ircnicks", []))
         if len(mxids) == 0:
             # user hasn't defined a Matrix account in FAS, just default to fedora.im
             mxid = f"@{fasusername}:fedora.im"

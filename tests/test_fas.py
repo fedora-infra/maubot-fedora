@@ -33,15 +33,76 @@ async def test_group_info(bot, plugin, respx_mock):
 
 
 @pytest.mark.parametrize("membership_type", ["members", "sponsors"])
-async def test_group_members(bot, plugin, respx_mock, membership_type):
+async def test_group_members(bot, plugin, respx_mock, membership_type, monkeypatch):
     respx_mock.get(f"http://fasjson.example.com/v1/groups/dummygroup/{membership_type}/").mock(
         return_value=httpx.Response(
             200, json={"result": [{"username": "member1"}, {"username": "member2"}]}
         ),
     )
+    monkeypatch.setattr(bot.client, "get_joined_members", mock.AsyncMock(return_value=dict()))
     await bot.send(f"!group {membership_type} dummygroup")
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == f"{membership_type.title()} of dummygroup: member1, member2"
+
+
+async def test_group_members_mentions(bot, plugin, respx_mock, monkeypatch):
+    respx_mock.get("http://fasjson.example.com/v1/groups/dummygroup/members/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "result": [
+                    {
+                        "username": "member1",
+                        "ircnicks": [],
+                    },
+                    {
+                        "username": "member2",
+                        "ircnicks": ["irc:/member2"],
+                    },
+                    {
+                        "username": "member3",
+                        "ircnicks": ["matrix:/member3"],
+                        "human_name": "Member 3",
+                    },
+                    {
+                        "username": "member4",
+                        "ircnicks": ["matrix:/member4", "matrix:/member4bis"],
+                        "human_name": "Member 4",
+                    },
+                    {
+                        "username": "member5",
+                        "ircnicks": ["matrix:/member5", "matrix:/member5bis"],
+                        "human_name": "Member 5",
+                    },
+                ]
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        bot.client, "get_joined_members", mock.AsyncMock(return_value={"@member5:fedora.im": {}})
+    )
+    await bot.send("!group members dummygroup")
+    assert len(bot.sent) == 1
+    # member1: no ircnick → no mention
+    # member2: no matrix id in ircnicks → no mention
+    # member3: single matrix id → mention
+    # member4: multiple matrix ids → mention list
+    # member5: multiple matrix ids but only one is in the room → mention
+    expected_body = (
+        "Members of dummygroup: member1, member2, Member 3, "
+        "member4 (@member4:fedora.im, @member4bis:fedora.im), "
+        "Member 5"
+    )
+    expected_formatted_body = (
+        "<p>Members of dummygroup: member1, member2, "
+        '<a href="https://matrix.to/#/@member3:fedora.im">Member 3</a>, '
+        'member4 (<a href="https://matrix.to/#/@member4:fedora.im">@member4:fedora.im</a>, '
+        '<a href="https://matrix.to/#/@member4bis:fedora.im">@member4bis:fedora.im</a>), '
+        '<a href="https://matrix.to/#/@member5:fedora.im">Member 5</a>'
+        "</p>\n"
+    )
+    assert bot.sent[0].content.body == expected_body
+    assert bot.sent[0].content.formatted_body == expected_formatted_body
 
 
 @pytest.mark.parametrize("pronouns", [None, ["they / them", "mx"]])

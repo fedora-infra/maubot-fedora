@@ -21,7 +21,7 @@ class FasjsonClient:
         response = await self._get(
             "/".join(["groups", groupname, membership_type]),
             params=params,
-            headers={"X-Fields": "username"},
+            headers={"X-Fields": "username,human_name,ircnicks"},
         )
         if response.status_code == 404:
             raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
