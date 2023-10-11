@@ -106,7 +106,8 @@ async def test_group_members_mentions(bot, plugin, respx_mock, monkeypatch):
 
 
 @pytest.mark.parametrize("pronouns", [None, ["they / them", "mx"]])
-async def test_hello(bot, plugin, respx_mock, pronouns):
+@pytest.mark.parametrize("alias", [None, "hi", "hello", "hello2", "hellomynameis"])
+async def test_user_hello(bot, plugin, respx_mock, pronouns, alias):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
@@ -125,7 +126,10 @@ async def test_hello(bot, plugin, respx_mock, pronouns):
         params={"ircnick__exact": "matrix://example.com/dummy"},
     ).mock(return_value=httpx.Response(200, json={"result": []}))
 
-    await bot.send("!hello")
+    if not alias:
+        await bot.send("!user hello")
+    else:
+        await bot.send(f"!{alias}")
     assert len(bot.sent) == 1
     expected = "Dummy User (dummy)"
     if pronouns:
@@ -133,7 +137,8 @@ async def test_hello(bot, plugin, respx_mock, pronouns):
     assert bot.sent[0].content.body == expected
 
 
-async def test_hello_with_username(bot, plugin, respx_mock):
+@pytest.mark.parametrize("alias", [None, "hi", "hello", "hello2", "hellomynameis"])
+async def test_hello_with_username(bot, plugin, respx_mock, alias):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy2/").mock(
         return_value=httpx.Response(
             200,
@@ -151,7 +156,10 @@ async def test_hello_with_username(bot, plugin, respx_mock):
         params={"ircnick__exact": "matrix://example.com/dummy"},
     ).mock(return_value=httpx.Response(200, json={"result": []}))
 
-    await bot.send("!hello dummy2")
+    if not alias:
+        await bot.send("!user hello dummy2")
+    else:
+        await bot.send(f"!{alias} dummy2")
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == "Dummy User 2 (dummy2)"
 
@@ -182,7 +190,8 @@ async def test_localtime(bot, plugin, respx_mock, monkeypatch):
     assert bot.sent[0].content.body == expected
 
 
-async def test_user_info(bot, plugin, respx_mock):
+@pytest.mark.parametrize("alias", [None, "fasinfo"])
+async def test_user_info(bot, plugin, respx_mock, alias):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
@@ -195,7 +204,10 @@ async def test_user_info(bot, plugin, respx_mock):
             },
         )
     )
-    await bot.send("!user dummy")
+    if not alias:
+        await bot.send("!user info dummy")
+    else:
+        await bot.send(f"!{alias} dummy")
     assert len(bot.sent) == 1
     expected = (
         "User: dummy,\n "
