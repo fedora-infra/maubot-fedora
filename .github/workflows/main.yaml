@@ -2,10 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: CI
+name: CI & Deployment
 on: [push, pull_request, workflow_dispatch]
 jobs:
   ci:
+    name: CI
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
@@ -22,3 +23,16 @@ jobs:
 
       - name: execute tox
         run: tox -- -v
+
+  deployment:
+    name: Deployment
+    if: github.ref_name == 'staging' || github.ref_name == 'stable'
+    needs: ci
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref_name }}
+
+    steps:
+      - name: Send generic webhook
+        run: |
+          curl -f -X POST -k https://${{vars.OPENSHIFT_API_HOSTNAME}}:6443/apis/build.openshift.io/v1/namespaces/maubot/buildconfigs/maubot-build/webhooks/${{secrets.MAUBOT_WEBHOOK_SECRET}}/generic
