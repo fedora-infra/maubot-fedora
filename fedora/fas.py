@@ -5,7 +5,7 @@ import pytz
 from maubot import MessageEvent
 from maubot.handlers import command
 
-from .constants import ALIASES, NL
+from .constants import NL
 from .exceptions import InfoGatherError
 from .handler import Handler
 from .utils import get_fasuser, matrix_ids_from_ircnicks, tag_user
@@ -30,11 +30,6 @@ class FasHandler(Handler):
                 mention = f"{user['username']} ({', '.join(tag_user(mxid) for mxid in mxids)})"
             mentions.append(mention)
         return mentions
-
-    @command.new(help="Query information about Fedora Accounts groups")
-    async def group(self, evt: MessageEvent) -> None:
-        """Query information about Fedora groups"""
-        pass
 
     async def _list_members(self, evt: MessageEvent, groupname: str, membership_type: str) -> None:
         """
@@ -66,6 +61,11 @@ class FasHandler(Handler):
 
         mentions = await self._get_mentions(users, evt)
         await evt.respond(f"{membership_type.title()} of {groupname}: {', '.join(mentions)}")
+
+    @command.new(help="Query information about Fedora Accounts groups")
+    async def group(self, evt: MessageEvent) -> None:
+        """Query information about Fedora groups"""
+        pass
 
     @group.subcommand(name="members", help="Return a list of members of the specified group")
     @command.argument("groupname", required=True)
@@ -100,19 +100,7 @@ class FasHandler(Handler):
             f"**Chat:** {chat_channels}{NL}"
         )
 
-    @command.new(help="Return brief information about a Fedora user.", aliases=ALIASES["hello"])
-    @command.argument("username", pass_raw=True, required=False)
-    async def hello(self, evt: MessageEvent, username: str) -> None:
-        """
-        Returns a short line of information about the user. If no username is provided, defaults to
-        the sender of the message.
-
-        #### Arguments ####
-
-        * `username`: A Fedora Accounts username or a Matrix User ID
-           (e.g. @username:fedora.im)
-
-        """
+    async def _user_hello(self, evt: MessageEvent, username: str | None) -> None:
         await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
@@ -128,19 +116,7 @@ class FasHandler(Handler):
             message += " - " + " or ".join(pronouns)
         await evt.respond(message)
 
-    @command.new(help="Return brief information about a Fedora user.", aliases=ALIASES["user"])
-    @command.argument("username", pass_raw=True, required=False)
-    async def user(self, evt: MessageEvent, username: str) -> None:
-        """
-        Returns a information from Fedora Accounts about the user
-        If no username is provided, defaults to the sender of the message.
-
-        #### Arguments ####
-
-        * `username`: A Fedora Accounts username or a Matrix User ID
-           (e.g. @username:fedora.im)
-
-        """
+    async def _user_info(self, evt: MessageEvent, username: str | None) -> None:
         await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
@@ -158,22 +134,10 @@ class FasHandler(Handler):
             f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])}{NL}"
         )
 
-    @command.new(help="Returns the current time of the user.")
-    @command.argument("username", pass_raw=True, required=True)
-    async def localtime(self, evt: MessageEvent, username: str) -> None:
-        """
-        Returns the current time of the user.
-        The timezone is queried from FAS.
-
-        #### Arguments ####
-
-        * `username`: A Fedora Accounts username or a Matrix User ID
-           (e.g. @username:fedora.im)
-
-        """
+    async def _user_localtime(self, evt: MessageEvent, username: str | None) -> None:
         await evt.mark_read()
         try:
-            user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
+            user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -193,3 +157,63 @@ class FasHandler(Handler):
             f'The current local time of "{user.get("username")}" is: "{time.strftime("%H:%M")}" '
             f"(timezone: {timezone_name})"
         )
+
+    @command.new(help="Get information about Fedora Accounts users")
+    async def user(self, evt: MessageEvent) -> None:
+        """Query information about Fedora groups"""
+        pass
+
+    @user.subcommand(name="hello", help="Return brief information about a Fedora user.")
+    @command.argument("username", pass_raw=True, required=False)
+    async def user_hello(self, evt: MessageEvent, username: str | None) -> None:
+        """
+        Returns a short line of information about the user. If no username is provided, defaults to
+        the sender of the message.
+
+        #### Arguments ####
+
+        * `username`: A Fedora Accounts username or a Matrix User ID
+           (e.g. @username:fedora.im)
+
+        """
+        await self._user_hello(evt, username)
+
+    @user.subcommand(name="info", help="Return brief information about a Fedora user.")
+    @command.argument("username", pass_raw=True, required=False)
+    async def user_info(self, evt: MessageEvent, username: str | None) -> None:
+        """
+        Returns a information from Fedora Accounts about the user
+        If no username is provided, defaults to the sender of the message.
+
+        #### Arguments ####
+
+        * `username`: A Fedora Accounts username or a Matrix User ID
+           (e.g. @username:fedora.im)
+
+        """
+        await self._user_info(evt, username)
+
+    @user.subcommand(name="localtime", help="Returns the current time of the user.")
+    @command.argument("username", pass_raw=True, required=True)
+    async def user_localtime(self, evt: MessageEvent, username: str | None) -> None:
+        """
+        Returns the current time of the user.
+        The timezone is queried from FAS.
+
+        #### Arguments ####
+
+        * `username`: A Fedora Accounts username or a Matrix User ID
+           (e.g. @username:fedora.im)
+
+        """
+        await self._user_localtime(evt, username)
+
+    @command.passive(r"^!(hi|hello|hello2|hellomynameis|fasinfo|localtime)(?:\s+|$)(.*)")
+    async def aliases(self, evt: MessageEvent, match) -> None:
+        msg, cmd, arguments = match
+        if cmd in ["hi", "hello", "hello2", "hellomynameis"]:
+            await self._user_hello(evt, arguments)
+        elif cmd in ["fasinfo"]:
+            await self._user_info(evt, arguments)
+        elif cmd in ["localtime"]:
+            await self._user_localtime(evt, arguments)
