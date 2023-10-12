@@ -37,47 +37,9 @@ class PagureIOHandler(Handler):
         """
         await self._get_pagure_issue(evt, project, issue_id)
 
-    # these were done in supybot / limnoria with the alias plugin. need to find a better way to
-    # do this so they can be defined, but for now, lets just define the commands here.
-    @command.new(help="Get a Summary of a ticket from the packaging-committee ticket tracker")
-    @command.argument("issue_id", required=True)
-    async def fpc(self, evt: MessageEvent, issue_id: str) -> None:
-        """
-        Show a summary of an issue in the `packaging-committee` pagure.io project
-
-        #### Arguments ####
-
-        * `issue_id`: the issue number
-
-        """
-        await self._get_pagure_issue(evt, "packaging-committee", issue_id)
-
-    # these were done in supybot / limnoria with the alias plugin. need to find a better way to
-    # do this so they can be defined, but for now, lets just define the commands here.
-    @command.new(help="Get a Summary of a ticket from the epel ticket tracker")
-    @command.argument("issue_id", required=True)
-    async def epel(self, evt: MessageEvent, issue_id: str) -> None:
-        """
-        Show a summary of an issue in the `epel` pagure.io project
-
-        #### Arguments ####
-
-        * `issue_id`: the issue number
-
-        """
-        await self._get_pagure_issue(evt, "epel", issue_id)
-
-    # these were done in supybot / limnoria with the alias plugin. need to find a better way to
-    # do this so they can be defined, but for now, lets just define the commands here.
-    @command.new(help="Get a Summary of a ticket from the fesco ticket tracker")
-    @command.argument("issue_id", required=True)
-    async def fesco(self, evt: MessageEvent, issue_id: str) -> None:
-        """
-        Show a summary of an issue in the `fesco` pagure.io project
-
-        #### Arguments ####
-
-        * `issue_id`: the issue number
-
-        """
-        await self._get_pagure_issue(evt, "fesco", issue_id)
+    @command.passive(r"^!(\S+)(?:\s+|$)(.*)")
+    async def aliases(self, evt: MessageEvent, match) -> None:
+        msg, cmd, arguments = match
+        defined_aliases = self.plugin.config.get("pagureio_issue_aliases", {})
+        if cmd in defined_aliases:
+            await self._get_pagure_issue(evt, defined_aliases[cmd], arguments)

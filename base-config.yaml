@@ -1,5 +1,9 @@
 fasjson_url: https://fasjson.fedoraproject.org
 pagureio_url: https://pagure.io
+pagureio_issue_aliases:
+  fpc: "packaging-committee"
+  epel: "epel"
+  fesco: "fesco"
 paguredistgit_url: https://src.fedoraproject.org
 bodhi_url: https://bodhi.fedoraproject.org
 controlroom: ''
