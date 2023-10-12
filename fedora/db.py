@@ -38,3 +38,12 @@ async def upgrade_v2(conn: Connection) -> None:
         CREATE INDEX idx_cookies_to_user_release ON cookies (to_user, release);
     """
     )
+
+
+@upgrade_table.register(description="Add index on cookie.to_user")
+async def upgrade_v3(conn: Connection) -> None:
+    await conn.execute(
+        """
+        CREATE INDEX idx_cookies_to_user ON cookies (to_user);
+    """
+    )
