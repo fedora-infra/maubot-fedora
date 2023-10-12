@@ -1,5 +1,9 @@
+from unittest import mock
+
 import httpx
 import pytest
+
+import fedora
 
 
 @pytest.mark.parametrize(
@@ -30,6 +34,30 @@ async def test_pagureissue(bot, plugin, respx_mock, command, project):
     )
     assert bot.sent[0].content.body == expected_text
     assert bot.sent[0].content.formatted_body == expected_html
+
+
+@pytest.mark.parametrize(
+    "command,result",
+    [
+        ("!fpc", ["packaging-committee", ""]),
+        ("!fpc 1234", ["packaging-committee", "1234"]),
+        ("!fpcd 1234", []),
+        ("a!fpcd 1234", []),
+        ("!fpc 1234 1234", ["packaging-committee", "1234 1234"]),
+    ],
+)
+async def test_pagureissue_regex(bot, plugin, monkeypatch, command, result):
+    mocked_get_pagure_issue = mock.AsyncMock()
+    monkeypatch.setattr(
+        fedora.pagureio.PagureIOHandler, "_get_pagure_issue", mocked_get_pagure_issue
+    )
+    await bot.send(command)
+    if result == []:
+        mocked_get_pagure_issue.assert_not_called()
+    else:
+        mocked_get_pagure_issue.assert_called_once()
+        assert mocked_get_pagure_issue.call_args[0][1] == result[0]
+        assert mocked_get_pagure_issue.call_args[0][2] == result[1]
 
 
 async def test_whoowns(bot, plugin, respx_mock):

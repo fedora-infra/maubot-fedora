@@ -10,10 +10,6 @@ async def test_help(bot, plugin):
     expected = (
         "● `!help [commandname]` - list commands\n"
         "● `!version ` - return information about this bot\n"
-        "● `!epel <issue_id>` - Get a Summary of a ticket from the epel ticket tracker\n"
-        "● `!fesco <issue_id>` - Get a Summary of a ticket from the fesco ticket tracker\n"
-        "● `!fpc <issue_id>` - Get a Summary of a ticket from the packaging-committee "
-        "ticket tracker\n"
         "● `!pagureissue <project> <issue_id>` - return a pagure issue\n"
         "● `!whoowns <package>` - Retrieve the owner of a given package\n"
         "● `!group  <subcommand> [...]` - Query information about Fedora Accounts groups\n"
