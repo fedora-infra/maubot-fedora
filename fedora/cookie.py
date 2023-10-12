@@ -3,10 +3,11 @@ import re
 from datetime import datetime
 
 from maubot import MessageEvent
-from maubot.handlers import event
+from maubot.handlers import command, event
 from mautrix.types import EventType, MessageType
 
 from .clients.bodhi import BodhiClient
+from .constants import NL
 from .db import UNIQUE_ERROR
 from .exceptions import InfoGatherError
 from .handler import Handler
@@ -56,6 +57,29 @@ class CookieHandler(Handler):
             return
         return match.group(1)
 
+    async def _get_cookie_totals(self, username):
+        dbq = "SELECT SUM(value) FROM cookies WHERE to_user = $1"
+        total = await self.plugin.database.fetchval(dbq, username)
+        by_release = {}
+
+        dbq = (
+            "SELECT release, SUM(value) AS count "
+            "FROM cookies "
+            "WHERE to_user = $1 "
+            "GROUP BY release "
+            "ORDER BY release"
+        )
+        release_totals = await self.plugin.database.fetch(dbq, username)
+        for row in release_totals:
+            by_release[row["release"]] = row["count"]
+
+        return total, by_release
+
+    async def _get_current_release_cookie_total(self, username, current_release):
+        dbq = "SELECT SUM(value) FROM cookies WHERE to_user = $1 AND release = $2"
+        total = await self.plugin.database.fetchval(dbq, username, current_release)
+        return total
+
     async def give(self, evt: MessageEvent, username: str) -> None:
         from_user = await get_fasuser(evt.sender, evt, self.plugin.fasjsonclient)
         if from_user is None:
@@ -83,6 +107,47 @@ class CookieHandler(Handler):
                 f"F{current_release} timeframe"
             )
             return
-        dbq = "SELECT SUM(value) FROM cookies WHERE to_user = $1 AND release = $2"
-        total = await self.plugin.database.fetchval(dbq, to_user["username"], current_release)
-        await evt.respond(f"{to_user['username']} has {total} cookie(s)")
+        total, by_release = await self._get_cookie_totals(to_user["username"])
+        await evt.respond(
+            f"{from_user['username']} gave a cookie to {to_user['username']}. They now "
+            f"have {total} cookie(s), {by_release[current_release]} of which were obtained "
+            f"in the Fedora {current_release} release cycle"
+        )
+
+    @command.new(help="Commands for the cookie system")
+    async def cookie(self, evt: MessageEvent) -> None:
+        pass
+
+    @cookie.subcommand(name="give", help="Give a cookie to another Fedora contributor")
+    @command.argument("username", required=True)
+    async def cookie_give(self, evt: MessageEvent, username: str) -> None:
+        if not username:
+            await evt.respond("username argument is required. e.g. `!cookie give mattdm`")
+            return
+        try:
+            await self.give(evt, username)
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
+
+    @cookie.subcommand(name="count", help="Return the cookie count for a user")
+    @command.argument("username", required=True)
+    async def cookie_count(self, evt: MessageEvent, username: str) -> None:
+        user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
+        try:
+            total, by_release = await self._get_cookie_totals(user["username"])
+
+            if not total:
+                await evt.respond(f"{user['username']} has no cookies")
+                return
+
+            message = f"{user['username']} has {total} cookies:{NL}"
+
+            for release, count in by_release.items():
+                message = message + f" * Fedora {release}: {count} cookies{NL}"
+
+            await evt.respond(message)
+
+        except InfoGatherError as e:
+            await evt.respond(e.message)
+            return
