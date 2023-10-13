@@ -108,23 +108,21 @@ async def test_group_members_mentions(bot, plugin, respx_mock, monkeypatch):
 @pytest.mark.parametrize("pronouns", [None, ["they / them", "mx"]])
 @pytest.mark.parametrize("alias", [None, "hi", "hello", "hello2", "hellomynameis"])
 async def test_user_hello(bot, plugin, respx_mock, pronouns, alias):
+    fasuser = {
+        "username": "dummy",
+        "human_name": "Dummy User",
+        "pronouns": pronouns,
+    }
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
-            json={
-                "result": {
-                    "username": "dummy",
-                    "human_name": "Dummy User",
-                    "pronouns": pronouns,
-                }
-            },
+            json={"result": fasuser},
         )
     )
-    # User hasn't set their matrix ID in FAS
     respx_mock.get(
         "http://fasjson.example.com/v1/search/users/",
         params={"ircnick__exact": "matrix://example.com/dummy"},
-    ).mock(return_value=httpx.Response(200, json={"result": []}))
+    ).mock(return_value=httpx.Response(200, json={"result": [fasuser]}))
 
     if not alias:
         await bot.send("!user hello")
