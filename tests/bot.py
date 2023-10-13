@@ -36,12 +36,13 @@ class TestBot(MaubotMatrixClient):
             SentEvent(room_id=room_id, event_type=event_type, content=content, kwargs=kwargs)
         )
 
+    async def dispatch(self, event_type: EventType, event):
+        tasks = self.client.dispatch_manual_event(event_type, event, force_synchronous=True)
+        return await asyncio.gather(*tasks)
+
     async def send(self, content, html=None, room_id="testroom"):
         event = make_message(content, html=html, room_id=room_id)
-        tasks = self.client.dispatch_manual_event(
-            EventType.ROOM_MESSAGE, MaubotMessageEvent(event, self.client), force_synchronous=True
-        )
-        return await asyncio.gather(*tasks)
+        await self.dispatch(EventType.ROOM_MESSAGE, MaubotMessageEvent(event, self.client))
 
 
 def make_message(content, html=None, room_id="testroom"):
