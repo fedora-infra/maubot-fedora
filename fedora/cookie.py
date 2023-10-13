@@ -19,6 +19,7 @@ COOKIE_TEXT_RE = re.compile(r"^([\w_.-]+)\+\+")
 COOKIE_HTML_RE = re.compile(
     r"^<a href=['\"]?http[s]?://matrix.to/#/([^'\" >]+)['\" >][^>]*>[^<]+</a>:?\s?\+\+"
 )
+COOKIE_EMOJI = "🍪"
 
 
 class CookieHandler(Handler):
@@ -43,6 +44,22 @@ class CookieHandler(Handler):
         except InfoGatherError as e:
             response = e.message
         await evt.respond(response)
+
+    @event.on(EventType.REACTION)
+    async def handle_emoji(self, evt: MessageEvent) -> None:
+        reaction = evt.content.relates_to
+        emoji = reaction.key
+        if emoji != COOKIE_EMOJI:
+            return
+        message_event = await self.plugin.client.get_event(evt.room_id, reaction.event_id)
+        try:
+            to_user = await get_fasuser_from_matrix_id(
+                message_event.sender, self.plugin.fasjsonclient
+            )
+            response = await self.give(evt.sender, to_user["username"])
+        except InfoGatherError as e:
+            response = e.message
+        await self.plugin.client.send_notice(evt.room_id, text=response)
 
     def _get_username(self, evt: MessageEvent) -> str | None:
         if evt.content.formatted_body is None:

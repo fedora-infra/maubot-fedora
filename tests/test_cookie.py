@@ -1,8 +1,17 @@
+import time
 from datetime import datetime
 from unittest import mock
 
 import httpx
 import pytest
+from mautrix.types import (
+    EventType,
+    MessageEvent,
+    ReactionEvent,
+    ReactionEventContent,
+    RelatesTo,
+    TextMessageEventContent,
+)
 
 import fedora
 
@@ -148,3 +157,56 @@ async def test_cookie_count(bot, plugin, respx_mock, db):
     assert bot.sent[0].content.body == (
         "foobar has 5 cookies:\n\n" "● Fedora 36: 3 cookies\n" "● Fedora 37: 2 cookies"
     )
+
+
+@pytest.mark.parametrize("emoji", [fedora.cookie.COOKIE_EMOJI, "🚀"])
+async def test_cookie_react(bot, plugin, respx_mock, emoji):
+    _mock_user(respx_mock, "dummy")
+    _mock_user(respx_mock, "foobar")
+    respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "releases": [
+                    {
+                        "name": "F38",
+                        "long_name": "Fedora 38",
+                        "version": "38",
+                        "id_prefix": "FEDORA",
+                        "eol": "2024-05-14",
+                    },
+                ],
+                "page": 1,
+                "pages": 1,
+                "rows_per_page": 20,
+                "total": 1,
+            },
+        )
+    )
+    orig_message = MessageEvent(
+        type=EventType.Class.MESSAGE,
+        room_id="dummy-room-id",
+        event_id="dummy-event-id",
+        timestamp=time.time(),
+        sender="@foobar:example.com",
+        content=TextMessageEventContent(),
+    )
+    bot.client.get_event = mock.AsyncMock(return_value=orig_message)
+    event = ReactionEvent(
+        type=EventType.REACTION,
+        room_id="dummy-room-id",
+        event_id="dummy-reaction-event-id",
+        timestamp=time.time(),
+        sender="@dummy:example.com",
+        content=ReactionEventContent(relates_to=RelatesTo(event_id="dummy-event-id", key=emoji)),
+    )
+    is_cookie_emoji = emoji == fedora.cookie.COOKIE_EMOJI
+    await bot.dispatch(EventType.REACTION, event)
+    if is_cookie_emoji:
+        assert len(bot.sent) == 1
+        assert bot.sent[0].content.body == (
+            "dummy gave a cookie to foobar. They now have 1 cookie(s), "
+            "1 of which were obtained in the Fedora 38 release cycle"
+        )
+    else:
+        assert len(bot.sent) == 0
