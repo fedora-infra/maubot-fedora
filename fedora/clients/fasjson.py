@@ -1,8 +1,12 @@
+import logging
+
 import httpx
 from httpx_gssapi import HTTPSPNEGOAuth
 
 from ..constants import MATRIX_USER_RE, NL
 from ..exceptions import InfoGatherError
+
+log = logging.getLogger(__name__)
 
 
 class FasjsonClient:
@@ -25,6 +29,11 @@ class FasjsonClient:
         )
         if response.status_code == 404:
             raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
+        elif response.status_code >= 400:
+            log.error(f"FASJSON response to {response.url}: {response.text}")
+            raise InfoGatherError(
+                f"Sorry, could not get info from FASJSON (code {response.status_code})"
+            )
         return response.json().get("result")
 
     async def get_group(self, groupname, params=None):
