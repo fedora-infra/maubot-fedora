@@ -40,21 +40,29 @@ def matrix_id_to_username(matrix_id):
     return matrix_user_match.group(1)
 
 
+async def get_fasuser_from_matrix_id(matrix_id: str, fasjson: FasjsonClient):
+    try:
+        return await fasjson.get_users_by_matrix_id(matrix_id)
+    except InfoGatherError:
+        # Matrix ID not set in FAS, only use it if it's on fedora.im.
+        matrix_user_match = MATRIX_USER_RE.match(matrix_id)
+        # return await fasjson.get_user(matrix_user_match.group(1))
+        if matrix_user_match.group(2) in FAS_MATRIX_DOMAINS:
+            username = matrix_user_match.group(1)
+            return await fasjson.get_user(username)
+        else:
+            raise
+
+
 async def get_fasuser(username: str, evt: MessageEvent, fasjson: FasjsonClient):
     matrix_id = get_matrix_id(username, evt)
     if matrix_id:
-        try:
-            return await fasjson.get_users_by_matrix_id(matrix_id)
-        except InfoGatherError:
-            # Matrix ID not set in FAS, only use it if it's on fedora.im.
-            matrix_user_match = MATRIX_USER_RE.match(matrix_id)
-            if matrix_user_match.group(2) in FAS_MATRIX_DOMAINS:
-                username = matrix_user_match.group(1)
-    # 2 possibilities:
-    # - We haven't found a matrix ID
-    # - We have found a matrix ID but it's not in FAS
-    # assume we were given a FAS / Fedora Account ID and use that
-    return await fasjson.get_user(matrix_id_to_username(username))
+        user = await get_fasuser_from_matrix_id(matrix_id, fasjson)
+        if user is not None:
+            return user
+    # We haven't found a matrix ID.
+    # Assume we were given a FAS / Fedora Account ID and use that
+    return await fasjson.get_user(username)
 
 
 def get_rowcount(db, result):

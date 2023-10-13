@@ -29,10 +29,7 @@ def _mock_user(respx_mock, username):
 async def test_cookie_give(bot, plugin, respx_mock, give_command):
     _mock_user(respx_mock, "dummy")
     _mock_user(respx_mock, "foobar")
-    respx_mock.get(
-        "http://bodhi.example.com/releases/",
-        params={"state": "current"},
-    ).mock(
+    respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
         return_value=httpx.Response(
             200,
             json={
@@ -81,25 +78,26 @@ async def test_cookie_give(bot, plugin, respx_mock, give_command):
         (
             "Foo Bar++",
             '<a href="https://matrix.to/#/@foobar:example.com">Foo Bar</a>++',
-            "@foobar:example.com",
+            "foobar",
         ),
         (
             "Foo Bar:++",
             '<a href="https://matrix.to/#/@foobar:example.com">Foo Bar</a>:++',
-            "@foobar:example.com",
+            "foobar",
         ),
         (
             "Foo Bar: ++",
             '<a href="https://matrix.to/#/@foobar:example.com">Foo Bar</a>: ++',
-            "@foobar:example.com",
+            "foobar",
         ),
         ("do a foobar++ now", None, None),
         ("foobar++ well done!", None, "foobar"),
     ],
 )
-async def test_cookie_parse(bot, plugin, monkeypatch, body, html, username):
+async def test_cookie_parse(bot, plugin, monkeypatch, respx_mock, body, html, username):
     give = mock.AsyncMock()
     monkeypatch.setattr(fedora.cookie.CookieHandler, "give", give)
+    _mock_user(respx_mock, "foobar")
     await bot.send(body, html=html)
     if username is None:
         give.assert_not_called()
@@ -111,10 +109,7 @@ async def test_cookie_parse(bot, plugin, monkeypatch, body, html, username):
 async def test_cookie_give_twice(bot, plugin, respx_mock, db):
     _mock_user(respx_mock, "dummy")
     _mock_user(respx_mock, "foobar")
-    respx_mock.get(
-        "http://bodhi.example.com/releases/",
-        params={"state": "current"},
-    ).mock(
+    respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
         return_value=httpx.Response(
             200,
             json={

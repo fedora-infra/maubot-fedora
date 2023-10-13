@@ -1,6 +1,5 @@
 import logging
 import re
-from datetime import datetime
 
 from maubot import MessageEvent
 from maubot.handlers import command, event
@@ -11,7 +10,7 @@ from .constants import NL
 from .db import UNIQUE_ERROR
 from .exceptions import InfoGatherError
 from .handler import Handler
-from .utils import get_fasuser
+from .utils import get_fasuser, get_fasuser_from_matrix_id
 
 log = logging.getLogger(__name__)
 
@@ -39,9 +38,11 @@ class CookieHandler(Handler):
             return
         await evt.mark_read()
         try:
-            await self.give(evt, username)
+            to_user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
+            response = await self.give(evt.sender, to_user["username"])
         except InfoGatherError as e:
-            await evt.respond(e.message)
+            response = e.message
+        await evt.respond(response)
 
     def _get_username(self, evt: MessageEvent) -> str | None:
         if evt.content.formatted_body is None:
@@ -80,36 +81,31 @@ class CookieHandler(Handler):
         total = await self.plugin.database.fetchval(dbq, username, current_release)
         return total
 
-    async def give(self, evt: MessageEvent, username: str) -> None:
-        from_user = await get_fasuser(evt.sender, evt, self.plugin.fasjsonclient)
-        if from_user is None:
-            raise InfoGatherError("Could not find your user in the Fedora Account system.")
-        to_user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
-        if to_user is None:
-            raise InfoGatherError(f"Could not find user {username} in the Fedora Account system.")
+    async def give(self, sender: str, to_user: str) -> None:
+        from_user = await get_fasuser_from_matrix_id(sender, self.plugin.fasjsonclient)
+        from_user = from_user["username"]
         current_release = await self.bodhi.get_current_release()
         current_release = str(current_release["version"])
         dbq = """
-            INSERT INTO cookies (from_user, to_user, release, date)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO cookies (from_user, to_user, release)
+            VALUES ($1, $2, $3)
         """
         try:
             await self.plugin.database.execute(
                 dbq,
-                from_user["username"],
-                to_user["username"],
+                from_user,
+                to_user,
                 current_release,
-                datetime.fromtimestamp(evt.timestamp / 1000),
             )
         except UNIQUE_ERROR:
-            await evt.respond(
-                f"You have already given cookies to {to_user['username']} during the "
+            return (
+                f"You have already given cookies to {to_user} during the "
                 f"F{current_release} timeframe"
             )
             return
-        total, by_release = await self._get_cookie_totals(to_user["username"])
-        await evt.respond(
-            f"{from_user['username']} gave a cookie to {to_user['username']}. They now "
+        total, by_release = await self._get_cookie_totals(to_user)
+        return (
+            f"{from_user} gave a cookie to {to_user}. They now "
             f"have {total} cookie(s), {by_release[current_release]} of which were obtained "
             f"in the Fedora {current_release} release cycle"
         )
@@ -125,10 +121,11 @@ class CookieHandler(Handler):
             await evt.respond("username argument is required. e.g. `!cookie give mattdm`")
             return
         try:
-            await self.give(evt, username)
+            to_user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
+            response = await self.give(evt.sender, to_user["username"])
         except InfoGatherError as e:
-            await evt.respond(e.message)
-            return
+            response = e.message
+        await evt.respond(response)
 
     @cookie.subcommand(name="count", help="Return the cookie count for a user")
     @command.argument("username", required=True)
