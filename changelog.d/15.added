@@ -1,0 +1,2 @@
+Added the `!cookies` command, with two sub-commands: `!cookie give` to give a cookie to a user, and
+`!cookie count` to provide a count of a user's cookies.

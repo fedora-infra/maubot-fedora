@@ -1,0 +1,2 @@
+Pagure project-specific aliases (e.g. `!fesco` or `!epel`) for the !pagureissue command are now
+defined in the maubot-fedora plugin config.

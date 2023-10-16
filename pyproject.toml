@@ -32,3 +32,43 @@ exclude_lines = [
     "^\\s*pass$",
     "\\.\\.\\.",
 ]
+
+[tool.towncrier]
+package = "fedora"
+directory = "changelog.d"
+filename = "docs/changelog.md"
+start_string = "<!-- towncrier release notes start -->\n"
+underlines = ["", "", ""]
+template = "changelog.d/changelog_template.jinja"
+title_format = "## [{version}](https://github.com/fedora-infra/maubot-fedora/tree/{version}) - {project_date}"
+issue_format = "[#{issue}](https://github.com/fedora-infra/maubot-fedora/issues/{issue})"
+
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
