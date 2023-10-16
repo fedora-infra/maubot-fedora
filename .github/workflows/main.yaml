@@ -55,3 +55,35 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: stable
           label: deployed:prod
+
+
+  github-release:
+    name: Create a GitHub Release 📢
+    if: startsWith(github.ref, 'refs/tags/')
+    needs:
+      - ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract changelog section
+        id: extract-changelog
+        uses: sean0x42/markdown-extract@v2
+        with:
+          file: docs/changelog.md
+          pattern: '\[[[:word:].-]+\]\(.*\)\s-\s[0-9-]{10}'
+          no-print-matched-heading: true
+      - name: Extract and save the version
+        id: extract-version
+        run: |
+          echo -n VERSION= >> "$GITHUB_OUTPUT"
+          awk '/^version:/ { print $2 }' maubot.yaml >> "$GITHUB_OUTPUT"
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          name: Release ${{ steps.extract-version.outputs.VERSION }}
+          prerelease: ${{ contains(github.ref, 'rc') }}
+          body: ${{ steps.extract-changelog.outputs.markdown }}
