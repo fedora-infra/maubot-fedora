@@ -9,6 +9,11 @@ from ..exceptions import InfoGatherError
 log = logging.getLogger(__name__)
 
 
+class NoResult(Exception):
+    def __init__(self, response):
+        self.response = response
+
+
 class FasjsonClient:
     def __init__(self, baseurl):
         self.baseurl = f"{baseurl}/v1/"
@@ -18,36 +23,43 @@ class FasjsonClient:
         kwargs["auth"] = HTTPSPNEGOAuth()
         async with httpx.AsyncClient() as client:
             response = await client.get(self.baseurl + endpoint + "/", **kwargs)
+            if response.status_code == 404:
+                raise NoResult(response)
+            elif response.status_code >= 400:
+                log.error(f"FASJSON response to {response.url}: {response.text}")
+                raise InfoGatherError(
+                    f"Sorry, could not get info from FASJSON (code {response.status_code})"
+                )
         return response
 
     async def get_group_membership(self, groupname, membership_type="members", params=None):
         """looks up a group membership (members or sponsors) by the groupname"""
-        response = await self._get(
-            "/".join(["groups", groupname, membership_type]),
-            params=params,
-            headers={"X-Fields": "username,human_name,ircnicks"},
-        )
-        if response.status_code == 404:
-            raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
-        elif response.status_code >= 400:
-            log.error(f"FASJSON response to {response.url}: {response.text}")
-            raise InfoGatherError(
-                f"Sorry, could not get info from FASJSON (code {response.status_code})"
+        try:
+            response = await self._get(
+                "/".join(["groups", groupname, membership_type]),
+                params=params,
+                headers={"X-Fields": "username,human_name,ircnicks"},
             )
+        except NoResult as e:
+            raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist") from e
         return response.json().get("result")
 
     async def get_group(self, groupname, params=None):
         """looks up a group by the groupname"""
-        response = await self._get("/".join(["groups", groupname]), params=params)
-        if response.status_code == 404:
-            raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist")
+        try:
+            response = await self._get("/".join(["groups", groupname]), params=params)
+        except NoResult as e:
+            raise InfoGatherError(f"Sorry, but group '{groupname}' does not exist") from e
         return response.json().get("result")
 
     async def get_user(self, username, params=None):
         """looks up a group by the groupname"""
-        response = await self._get("/".join(["users", username]), params=params)
-        if response.status_code == 404:
-            raise InfoGatherError(f"Sorry, but Fedora Accounts user '{username}' does not exist")
+        try:
+            response = await self._get("/".join(["users", username]), params=params)
+        except NoResult as e:
+            raise InfoGatherError(
+                f"Sorry, but Fedora Accounts user '{username}' does not exist"
+            ) from e
         return response.json().get("result")
 
     async def search_users(self, params=None):
