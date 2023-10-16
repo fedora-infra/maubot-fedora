@@ -3,14 +3,14 @@ import re
 
 from maubot import MessageEvent
 from maubot.handlers import command, event
-from mautrix.types import EventType, MessageType
+from mautrix.types import EventType
 
 from .clients.bodhi import BodhiClient
 from .constants import NL
 from .db import UNIQUE_ERROR
 from .exceptions import InfoGatherError
 from .handler import Handler
-from .utils import get_fasuser, get_fasuser_from_matrix_id
+from .utils import get_fasuser, get_fasuser_from_matrix_id, is_text_message
 
 log = logging.getLogger(__name__)
 
@@ -27,9 +27,11 @@ class CookieHandler(Handler):
         super().__init__(plugin)
         self.bodhi = BodhiClient(plugin.config["bodhi_url"])
 
-    @event.on(EventType.ROOM_MESSAGE)
+    # The event.on() decorator is not correctly typed and doesn't understand
+    # this is a bound method.
+    @event.on(EventType.ROOM_MESSAGE)  # type: ignore[arg-type]
     async def handle(self, evt: MessageEvent) -> None:
-        if evt.content.msgtype not in [MessageType.TEXT, MessageType.NOTICE]:
+        if not is_text_message(evt.content):
             return
         if evt.sender == evt.client.mxid:
             # The bot sent this message
@@ -45,7 +47,7 @@ class CookieHandler(Handler):
             response = e.message
         await evt.respond(response)
 
-    @event.on(EventType.REACTION)
+    @event.on(EventType.REACTION)  # type: ignore[arg-type]
     async def handle_emoji(self, evt: MessageEvent) -> None:
         reaction = evt.content.relates_to
         emoji = reaction.key
@@ -62,7 +64,7 @@ class CookieHandler(Handler):
         await self.plugin.client.send_notice(evt.room_id, text=response)
 
     def _get_username(self, evt: MessageEvent) -> str | None:
-        if evt.content.formatted_body is None:
+        if not is_text_message(evt.content) or evt.content.formatted_body is None:
             # No tags, use the text
             regex = COOKIE_TEXT_RE
             content = evt.content.body
@@ -72,7 +74,7 @@ class CookieHandler(Handler):
             content = evt.content.formatted_body
         match = regex.match(content)
         if not match:
-            return
+            return None
         return match.group(1)
 
     async def _get_cookie_totals(self, username):
@@ -98,7 +100,7 @@ class CookieHandler(Handler):
         total = await self.plugin.database.fetchval(dbq, username, current_release)
         return total
 
-    async def give(self, sender: str, to_user: str) -> None:
+    async def give(self, sender: str, to_user: str) -> str:
         from_user = await get_fasuser_from_matrix_id(sender, self.plugin.fasjsonclient)
         from_user = from_user["username"]
         current_release = await self.bodhi.get_current_release()
@@ -119,7 +121,6 @@ class CookieHandler(Handler):
                 f"You have already given cookies to {to_user} during the "
                 f"F{current_release} timeframe"
             )
-            return
         total, by_release = await self._get_cookie_totals(to_user)
         return (
             f"{from_user} gave a cookie to {to_user}. They now "
