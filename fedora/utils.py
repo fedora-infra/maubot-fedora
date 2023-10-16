@@ -11,9 +11,6 @@ MENTION_RE = re.compile(r"href=['\"]?http[s]?://matrix.to/#/([^'\" >]+)['\" >]")
 
 
 def get_matrix_id(username: str, evt: MessageEvent):
-    if " " in username:
-        raise InfoGatherError("Sorry, I can only look up one username at a time")
-
     # else check if the username given is a matrix id (@<username>:<server.com>)
     if MATRIX_USER_RE.match(username):
         return username
@@ -29,6 +26,10 @@ def get_matrix_id(username: str, evt: MessageEvent):
             raise InfoGatherError("Sorry, I can only look up one username at a time")
         elif len(matches) == 1:
             return matches[0]
+
+    # No match, username is not a matrix ID already
+    if " " in username:
+        raise InfoGatherError("Sorry, I can only look up one username at a time")
 
     return None
 
@@ -47,7 +48,7 @@ async def get_fasuser_from_matrix_id(matrix_id: str, fasjson: FasjsonClient):
         # Matrix ID not set in FAS, only use it if it's on fedora.im.
         matrix_user_match = MATRIX_USER_RE.match(matrix_id)
         # return await fasjson.get_user(matrix_user_match.group(1))
-        if matrix_user_match.group(2) in FAS_MATRIX_DOMAINS:
+        if matrix_user_match is not None and matrix_user_match.group(2) in FAS_MATRIX_DOMAINS:
             username = matrix_user_match.group(1)
             return await fasjson.get_user(username)
         else:

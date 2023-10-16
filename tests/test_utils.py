@@ -6,6 +6,11 @@ import fedora
 from .bot import make_message
 
 
+def _make_mention(user_name, display_name=None):
+    display_name = display_name or user_name
+    return f'<a href="https://matrix.to/#/{user_name}">{display_name}</a>'
+
+
 @pytest.mark.parametrize(
     "username,mention,expected",
     [
@@ -17,7 +22,7 @@ from .bot import make_message
 async def test_get_matrix_id(bot, plugin, username, mention, expected):
     message = make_message(f"!hello {username}")
     if mention:
-        message.content.formatted_body = f'<p>!hello <a href="https://matrix.to/#/{mention}"></p>'
+        message.content.formatted_body = f"<p>!hello {_make_mention(mention, username)}</p>"
     result = fedora.utils.get_matrix_id(username, message)
     assert result == expected
 
@@ -33,6 +38,7 @@ async def test_get_matrix_id(bot, plugin, username, mention, expected):
         ("Dummy2", "@dummy2:example.com", "dummy2"),
         ("dummy", "@foobar:somewhere.com", None),
         ("Dummy", "@dummy:example.com", None),
+        ("Dummy User", "@dummy:fedora.im", "dummy"),
     ],
 )
 async def test_get_fasuser(bot, plugin, respx_mock, username, mention, expected):
@@ -71,7 +77,7 @@ async def test_get_fasuser(bot, plugin, respx_mock, username, mention, expected)
 
     message = make_message(f"!hello {username}")
     if mention:
-        message.content.formatted_body = f'<p>!hello <a href="https://matrix.to/#/{mention}"></p>'
+        message.content.formatted_body = f"<p>!hello {_make_mention(mention, username)}</p>"
     if expected is None:
         with pytest.raises(fedora.exceptions.InfoGatherError) as exc:
             result = await fedora.utils.get_fasuser(username, message, plugin.fasjsonclient)
@@ -86,3 +92,20 @@ async def test_get_fasuser(bot, plugin, respx_mock, username, mention, expected)
     else:
         result = await fedora.utils.get_fasuser(username, message, plugin.fasjsonclient)
         assert result["username"] == expected
+
+
+@pytest.mark.parametrize(
+    "username,mention",
+    [
+        ("dummy dummy2", None),
+        ("dummy dummy2", f'<p>!hello {_make_mention("dummy")} {_make_mention("dummy2")}</p>'),
+        ("dummy dummy2", "<p>!hello dummy dummy2</p>"),
+    ],
+)
+async def test_get_fasuser_double(bot, plugin, respx_mock, username, mention):
+    message = make_message(f"!hello {username}")
+    if mention:
+        message.content.formatted_body = mention
+    with pytest.raises(fedora.exceptions.InfoGatherError) as exc:
+        await fedora.utils.get_fasuser(username, message, plugin.fasjsonclient)
+    assert str(exc.value) == "Sorry, I can only look up one username at a time"
