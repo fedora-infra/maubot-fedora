@@ -72,3 +72,10 @@ showcontent = true
 directory = "fixed"
 name = "Fixed"
 showcontent = true
+
+
+[[tool.mypy.overrides]]
+module = [
+    "httpx_gssapi",
+]
+ignore_missing_imports = true

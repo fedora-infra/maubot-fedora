@@ -7,3 +7,6 @@ pytest-cov
 coverage[toml]
 respx
 towncrier
+mypy
+asyncpg-stubs
+types-pytz
