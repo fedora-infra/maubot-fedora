@@ -1,7 +1,16 @@
+from pathlib import Path
+
+from ruamel.yaml import YAML
+
+
 async def test_version(bot, plugin):
+    base_path = Path(__file__).parent.parent
+    yaml = YAML()
+    with open(base_path.joinpath("maubot.yaml")) as fh:
+        metadata = yaml.load(fh.read())
     await bot.send("!version")
     assert len(bot.sent) == 1
-    assert bot.sent[0].content.body == "maubot-fedora version 0.2.0"
+    assert bot.sent[0].content.body == f"maubot-fedora version {metadata['version']}"
 
 
 async def test_help(bot, plugin):

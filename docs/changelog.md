@@ -12,6 +12,19 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [0.2.1](https://github.com/fedora-infra/maubot-fedora/tree/0.2.1) - 2023-10-16
+
+
+### Added
+
+- Better error catching in the FASJSON client [#afa9a99](https://github.com/fedora-infra/maubot-fedora/issues/afa9a99)
+
+
+### Fixed
+
+- Fix the username matching code [#2a0d143](https://github.com/fedora-infra/maubot-fedora/issues/2a0d143)
+
+
 ## [0.2.0](https://github.com/fedora-infra/maubot-fedora/tree/0.2.0) - 2023-10-16
 
 
