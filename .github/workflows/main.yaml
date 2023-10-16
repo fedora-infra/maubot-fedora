@@ -36,3 +36,22 @@ jobs:
       - name: Send generic webhook
         run: |
           curl -f -X POST -k https://${{vars.OPENSHIFT_API_HOSTNAME}}:6443/apis/build.openshift.io/v1/namespaces/maubot/buildconfigs/maubot-build/webhooks/${{secrets.MAUBOT_WEBHOOK_SECRET}}/generic
+
+  label:
+    name: Apply labels
+    runs-on: ubuntu-latest
+    needs: deployment
+
+    steps:
+      - name: Staging deployment
+        uses: fedora-infra/label-when-in-branch@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: staging
+          label: deployed:staging
+      - name: Production deployment
+        uses: fedora-infra/label-when-in-branch@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: stable
+          label: deployed:prod
