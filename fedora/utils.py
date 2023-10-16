@@ -1,6 +1,8 @@
 import re
+from typing import TypeGuard
 
 from maubot import MessageEvent
+from mautrix.types import BaseMessageEventContent, MessageType, Obj, TextMessageEventContent
 from mautrix.util.async_db import Scheme
 
 from .clients.fasjson import FasjsonClient
@@ -17,7 +19,7 @@ def get_matrix_id(username: str, evt: MessageEvent):
 
     # check if the formatted message has mentions (ie the user has tab-completed on someones
     # name) in them
-    if evt.content.formatted_body:
+    if is_text_message(evt.content) and evt.content.formatted_body:
         # in element at least, when usernames are mentioned, they are formatted like:
         # <a href="https://matrix.to/#/@zodbot:fedora.im">zodbot</a>
         # here we check the formatted message and extract all the matrix user IDs
@@ -88,3 +90,15 @@ def matrix_ids_from_ircnicks(ircnicks):
 
 def tag_user(mxid, name=None):
     return f"[{name or mxid}](https://matrix.to/#/{mxid})"
+
+
+def is_text_message(content: BaseMessageEventContent | Obj) -> TypeGuard[TextMessageEventContent]:
+    """
+    Check that a message's content is an instance of TextMessageEventContent
+    and of msgtype TEXT or NOTICE
+    """
+    return (
+        isinstance(content, TextMessageEventContent)
+        # TextMessageEventContent can also be of MessageType.EMOTE, hence the second check
+        and content.msgtype in {MessageType.TEXT, MessageType.NOTICE}
+    )

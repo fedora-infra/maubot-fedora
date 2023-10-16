@@ -26,6 +26,7 @@ class Fedora(Plugin):
         return upgrade_table
 
     async def start(self) -> None:
+        assert self.config  # noqa: S101 # This is a valid use of assert
         self.config.load_and_update()
         self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
         self.register_handler_class(PagureIOHandler(self))
