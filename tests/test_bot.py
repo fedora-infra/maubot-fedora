@@ -1,7 +1,7 @@
 async def test_version(bot, plugin):
     await bot.send("!version")
     assert len(bot.sent) == 1
-    assert bot.sent[0].content.body == "maubot-fedora version 0.1.0"
+    assert bot.sent[0].content.body == "maubot-fedora version 0.2.0"
 
 
 async def test_help(bot, plugin):

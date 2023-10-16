@@ -1,3 +1,0 @@
-Fedora Accounts user commands (`user`, `localtime`, and `hello`) are now grouped under the
-`!user` top-level command. Additionally, aliases are provided for to the previous top-level
-commands.
