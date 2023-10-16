@@ -1,12 +1,12 @@
-maubot
+asyncpg-stubs
 black
-ruff
+coverage[toml]
+maubot
+mypy
 pytest
 pytest-asyncio
 pytest-cov
-coverage[toml]
 respx
+ruff
 towncrier
-mypy
-asyncpg-stubs
 types-pytz
