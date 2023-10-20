@@ -14,6 +14,7 @@ from .cookie import CookieHandler
 from .db import upgrade_table
 from .distgit import DistGitHandler
 from .fas import FasHandler
+from .gags import MiscHandler
 from .oncall import OnCallHandler
 from .pagureio import PagureIOHandler
 
@@ -35,6 +36,7 @@ class Fedora(Plugin):
         self.register_handler_class(BugzillaHandler(self))
         self.register_handler_class(OnCallHandler(self))
         self.register_handler_class(CookieHandler(self))
+        self.register_handler_class(MiscHandler(self))
 
     async def stop(self) -> None:
         pass
@@ -77,6 +79,9 @@ class Fedora(Plugin):
         else:
             # list all the commands with the help arg from command.new
             for cmd in self._get_handler_commands():
+                # Skip undocumented commands
+                if cmd.__mb_help__ is None:
+                    continue
                 output.append(
                     f"* `{cmd.__mb_prefix__} {cmd.__mb_usage_args__}` - {cmd.__mb_help__}"
                 )
