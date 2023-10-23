@@ -47,6 +47,7 @@ async def plugin(bot, db):
         "pagureio_url": "http://pagure.example.com",
         "paguredistgit_url": "http://src.example.com",
         "bodhi_url": "http://bodhi.example.com",
+        "fedorastatus_url": "http://status.example.com",
         "controlroom": "controlroom",
     }
     config = Config(lambda: test_config, lambda: base_config, lambda c: None)

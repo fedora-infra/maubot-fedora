@@ -8,4 +8,5 @@ class Config(BaseProxyConfig):
         helper.copy("pagureio_issue_aliases")
         helper.copy("paguredistgit_url")
         helper.copy("bodhi_url")
+        helper.copy("fedorastatus_url")
         helper.copy("controlroom")

@@ -23,6 +23,7 @@ async def test_help(bot, plugin):
         "● `!whoowns <package>` - Retrieve the owner of a given package\n"
         "● `!group  <subcommand> [...]` - Query information about Fedora Accounts groups\n"
         "● `!user  <subcommand> [...]` - Get information about Fedora Accounts users\n"
+        "● `!infra  <subcommand> [...]` - Fedora Infrastructure commands\n"
         "● `!bug <bug_id>` - return a bugzilla bug\n"
         "● `!oncall  <subcommand> [...]` - oncall\n"
         "● `!cookie  <subcommand> [...]` - Commands for the cookie system"

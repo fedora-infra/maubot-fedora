@@ -14,6 +14,7 @@ from .cookie import CookieHandler
 from .db import upgrade_table
 from .distgit import DistGitHandler
 from .fas import FasHandler
+from .infra import InfraHandler
 from .oncall import OnCallHandler
 from .pagureio import PagureIOHandler
 
@@ -32,6 +33,7 @@ class Fedora(Plugin):
         self.register_handler_class(PagureIOHandler(self))
         self.register_handler_class(DistGitHandler(self))
         self.register_handler_class(FasHandler(self))
+        self.register_handler_class(InfraHandler(self))
         self.register_handler_class(BugzillaHandler(self))
         self.register_handler_class(OnCallHandler(self))
         self.register_handler_class(CookieHandler(self))

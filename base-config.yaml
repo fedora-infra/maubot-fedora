@@ -6,4 +6,5 @@ pagureio_issue_aliases:
   fesco: "fesco"
 paguredistgit_url: https://src.fedoraproject.org
 bodhi_url: https://bodhi.fedoraproject.org
+fedorastatus_url: https://status.fedoraproject.org
 controlroom: ''
