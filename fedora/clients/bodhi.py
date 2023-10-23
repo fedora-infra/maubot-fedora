@@ -15,7 +15,10 @@ class BodhiClient:
 
     def _check_errors(self, response):
         if response.status_code == 404:
-            raise InfoGatherError(f"No such object in Bodhi: {response.json().get('error')}")
+            errors = response.json().get("errors")
+            raise InfoGatherError(
+                f"Issue querying Bodhi: {','.join([e.get('description') for e in errors])}"
+            )
         elif response.status_code != 200:
             raise InfoGatherError(
                 f"Issue querying Bodhi: {response.status_code}: {response.reason_phrase}"
