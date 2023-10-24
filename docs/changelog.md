@@ -12,6 +12,15 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [0.3.0](https://github.com/fedora-infra/maubot-fedora/tree/0.3.0) - 2023-10-24
+
+
+### Added
+
+- The new !infra status command provides information from http://status.fedoraproject.org about
+  known and upcoming outages on Fedora infrastructure. [#25](https://github.com/fedora-infra/maubot-fedora/issues/25)
+
+
 ## [0.2.1](https://github.com/fedora-infra/maubot-fedora/tree/0.2.1) - 2023-10-16
 
 
