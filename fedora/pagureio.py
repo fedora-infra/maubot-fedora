@@ -2,6 +2,7 @@ from maubot import MessageEvent
 from maubot.handlers import command
 
 from .clients.pagure import PagureClient
+from .constants import COMMAND_RE
 from .exceptions import InfoGatherError
 from .handler import Handler
 
@@ -37,7 +38,7 @@ class PagureIOHandler(Handler):
         """
         await self._get_pagure_issue(evt, project, issue_id)
 
-    @command.passive(r"^!(\S+)(?:\s+|$)(.*)")
+    @command.passive(COMMAND_RE)
     async def aliases(self, evt: MessageEvent, match) -> None:
         msg, cmd, arguments = match
         defined_aliases = self.plugin.config.get("pagureio_issue_aliases", {})

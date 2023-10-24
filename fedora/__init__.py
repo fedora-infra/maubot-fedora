@@ -15,7 +15,6 @@ from .db import upgrade_table
 from .distgit import DistGitHandler
 from .fas import FasHandler
 from .infra import InfraHandler
-from .oncall import OnCallHandler
 from .pagureio import PagureIOHandler
 
 log = logging.getLogger(__name__)
@@ -35,7 +34,6 @@ class Fedora(Plugin):
         self.register_handler_class(FasHandler(self))
         self.register_handler_class(InfraHandler(self))
         self.register_handler_class(BugzillaHandler(self))
-        self.register_handler_class(OnCallHandler(self))
         self.register_handler_class(CookieHandler(self))
 
     async def stop(self) -> None:
