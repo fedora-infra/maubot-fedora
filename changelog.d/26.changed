@@ -1,0 +1,3 @@
+Changed the `!oncall` command (and associated subcommands) to `!infra oncall`. Additionally, added
+the new `!infra oncall list` command that returns the list of sysadmins that are on call, and this
+command is now aliased to `!oncall`

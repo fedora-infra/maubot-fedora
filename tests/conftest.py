@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import logging
 from pathlib import Path
 
 import aiohttp
+import pytest
 import pytest_asyncio
 from maubot.loader import PluginMeta
 from maubot.standalone.loader import FileSystemLoader
@@ -67,3 +69,15 @@ async def plugin(bot, db):
         )
         await instance.internal_start()
         yield instance
+
+
+@pytest.fixture
+def freeze_datetime(monkeypatch):
+    SET_TIME = datetime.datetime(2023, 11, 1, 13, 00, 00)
+
+    class thedatetime:
+        @classmethod
+        def now(cls, t):
+            return SET_TIME
+
+    monkeypatch.setattr(datetime, "datetime", thedatetime)
