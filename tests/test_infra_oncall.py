@@ -1,5 +1,3 @@
-import datetime
-
 import httpx
 import pytest
 
@@ -29,16 +27,7 @@ async def test_oncall_empty(bot, plugin):
 
 
 @pytest.mark.parametrize("listcommands", ["!oncall", "!infra oncall list"])
-async def test_oncall_list(bot, plugin, db, monkeypatch, listcommands):
-    SET_TIME = datetime.datetime(2023, 11, 1, 13, 00, 00)
-
-    class thedatetime:
-        @classmethod
-        def now(cls, t):
-            return SET_TIME
-
-    monkeypatch.setattr(datetime, "datetime", thedatetime)
-
+async def test_oncall_list(bot, plugin, db, freeze_datetime, listcommands):
     await db.execute(
         "INSERT INTO oncall (username, mxid, timezone) "
         "VALUES ('dummy', '@dummy:example.com', 'UTC')"
