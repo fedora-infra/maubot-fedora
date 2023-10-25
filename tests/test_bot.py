@@ -51,3 +51,10 @@ async def test_help_cookie(bot, plugin):
         "● count <username> - Return the cookie count for a user"
     )
     assert bot.sent[0].content.body == expected
+
+
+async def test_help_command_unknown(bot, plugin):
+    await bot.send("!help biscuits")
+    assert len(bot.sent) == 1
+    expected = "> <@dummy:example.com> !help biscuits\n\n`biscuits` is not a valid command"
+    assert bot.sent[0].content.body == expected
