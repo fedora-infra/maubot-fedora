@@ -9,7 +9,7 @@ from mautrix.util.config import BaseProxyConfig
 from .bugzilla import BugzillaHandler
 from .clients.fasjson import FasjsonClient
 from .config import Config
-from .constants import ALIASES, NL
+from .constants import NL
 from .cookie import CookieHandler
 from .db import upgrade_table
 from .distgit import DistGitHandler
@@ -61,15 +61,9 @@ class Fedora(Plugin):
         if commandname:
             # return the full help (docstring) for the given command
             for cmd in self._get_handler_commands():
-                aliases = ALIASES.get(cmd.__mb_name__, [])
-                if commandname != cmd.__mb_name__ and commandname not in aliases:
+                if commandname != cmd.__mb_name__:
                     continue
                 output.append(cmd.__mb_full_help__)
-                aliases = ALIASES.get(commandname, []) or aliases
-                if aliases:
-                    output.append(f"{NL}#### Aliases ####")
-                    for alias in aliases:
-                        output.append(f"* `{alias}`")
                 break
             else:
                 await evt.reply(f"`{commandname}` is not a valid command")
