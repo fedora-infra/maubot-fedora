@@ -14,7 +14,7 @@ class BugzillaClient:
 
     def _check_errors(self, response):
         if response.status_code == 404:
-            raise InfoGatherError(f"Issue querying Bugzilla: {response.json().get('error')}")
+            raise InfoGatherError(f"Issue querying Bugzilla: {response.json().get('message')}")
         elif response.status_code != 200:
             raise InfoGatherError(
                 f"Issue querying Bugzilla: {response.status_code}: {response.reason_phrase}"
