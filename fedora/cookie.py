@@ -118,7 +118,7 @@ class CookieHandler(Handler):
             )
         except UNIQUE_ERROR:
             return (
-                f"You have already given cookies to {to_user} during the "
+                f"{from_user} has already given cookies to {to_user} during the "
                 f"F{current_release} timeframe"
             )
         total, by_release = await self._get_cookie_totals(to_user)

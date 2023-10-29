@@ -139,7 +139,7 @@ async def test_cookie_give_twice(bot, plugin, respx_mock, db):
     assert len(bot.sent) == 1
     assert (
         bot.sent[0].content.body
-        == "You have already given cookies to foobar during the F38 timeframe"
+        == "dummy has already given cookies to foobar during the F38 timeframe"
     )
 
 
