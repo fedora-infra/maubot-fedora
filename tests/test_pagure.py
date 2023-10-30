@@ -36,6 +36,16 @@ async def test_pagureissue(bot, plugin, respx_mock, command, project):
     assert bot.sent[0].content.formatted_body == expected_html
 
 
+async def test_issue_notfound(bot, plugin, respx_mock):
+    respx_mock.get("http://pagure.example.com/api/0/biscuits_project/issue/44").mock(
+        return_value=httpx.Response(404, json={"error": "Biscuits not Found Error"})
+    )
+    await bot.send("!pagureissue biscuits_project 44")
+
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "Issue querying Pagure: Biscuits not Found Error"
+
+
 @pytest.mark.parametrize(
     "command,result",
     [
@@ -87,3 +97,57 @@ async def test_whoowns(bot, plugin, respx_mock):
     )
     assert bot.sent[0].content.body == expected_text
     assert bot.sent[0].content.formatted_body == expected_html
+
+
+@pytest.mark.parametrize("access_type", [None, "admin", "owner", "commit"])
+async def test_whoowns_empty_users(bot, plugin, respx_mock, access_type):
+    json_response = {
+        "access_users": {
+            "admin": [],
+            "owner": [],
+            "commit": [],
+        }
+    }
+
+    if access_type:
+        json_response["access_users"][access_type] = [f"{access_type}-1", f"{access_type}-2"]
+    respx_mock.get("http://src.example.com/api/0/rpms/dummy-package").mock(
+        return_value=httpx.Response(
+            200,
+            json=json_response,
+        )
+    )
+    await bot.send("!whoowns dummy-package")
+    if access_type:
+        assert len(bot.sent) == 1
+        expected_text = f"**{access_type}:** {access_type}-1, {access_type}-2"
+        expected_html = f"<p><strong>{access_type}:</strong> {access_type}-1, {access_type}-2</p>\n"
+        assert bot.sent[0].content.body == expected_text
+        assert bot.sent[0].content.formatted_body == expected_html
+    else:
+        assert bot.sent[0].content.body == (
+            "dummy-package has no owners, admins, or users with " "commit access"
+        )
+        assert len(bot.sent) == 1
+
+
+async def test_whoowns_no_package_given(bot, plugin):
+    await bot.send("!whoowns")
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "package argument is required. e.g. `!whoowns kernel`"
+
+
+async def test_whoowns_get_project_infogathererror(bot, plugin, respx_mock, monkeypatch):
+    errormessage = "biscuits!"
+    mock_get_project = mock.AsyncMock(side_effect=fedora.exceptions.InfoGatherError(errormessage))
+    monkeypatch.setattr(fedora.distgit.PagureClient, "get_project", mock_get_project)
+    respx_mock.get("http://src.example.com/api/0/rpms/dummy-package").mock(
+        return_value=httpx.Response(
+            200,
+            json={},
+        )
+    )
+    await bot.send("!whoowns kernel")
+
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == errormessage

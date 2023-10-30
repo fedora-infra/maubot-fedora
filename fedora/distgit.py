@@ -24,6 +24,9 @@ class DistGitHandler(Handler):
 
         """
         await evt.mark_read()
+        if not package:
+            await evt.respond("package argument is required. e.g. `!whoowns kernel`")
+            return
         try:
             packageinfo = await self.paguredistgitclient.get_project(package, namespace="rpms")
         except InfoGatherError as e:
@@ -41,6 +44,9 @@ class DistGitHandler(Handler):
         if committers:
             committers = f"__commit:__ {committers}{NL}"
 
-        resp = "".join([x for x in [owners, admins, committers] if x != ""])
+        resp = (
+            "".join([x for x in [owners, admins, committers] if x != ""])
+            or f"{package} has no owners, admins, or users with commit access"
+        )
 
         await evt.respond(resp)

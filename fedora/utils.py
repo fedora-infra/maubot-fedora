@@ -36,13 +36,6 @@ def get_matrix_id(username: str, evt: MessageEvent):
     return None
 
 
-def matrix_id_to_username(matrix_id):
-    matrix_user_match = MATRIX_USER_RE.match(matrix_id)
-    if not matrix_user_match:
-        return matrix_id  # Already a username
-    return matrix_user_match.group(1)
-
-
 async def get_fasuser_from_matrix_id(matrix_id: str, fasjson: FasjsonClient):
     try:
         return await fasjson.get_users_by_matrix_id(matrix_id)
