@@ -97,11 +97,6 @@ class CookieHandler(Handler):
 
         return total, by_release
 
-    async def _get_current_release_cookie_total(self, username, current_release):
-        dbq = "SELECT SUM(value) FROM cookies WHERE to_user = $1 AND release = $2"
-        total = await self.plugin.database.fetchval(dbq, username, current_release)
-        return total
-
     async def give(self, sender: str, to_user: str) -> str:
         from_user = await get_fasuser_from_matrix_id(sender, self.plugin.fasjsonclient)
         from_user = from_user["username"]
@@ -162,21 +157,21 @@ class CookieHandler(Handler):
     @cookie.subcommand(name="count", help="Return the cookie count for a user")
     @command.argument("username", required=True)
     async def cookie_count(self, evt: MessageEvent, username: str) -> None:
-        user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         try:
-            total, by_release = await self._get_cookie_totals(user["username"])
-
-            if not total:
-                await evt.respond(f"{user['username']} has no cookies")
-                return
-
-            message = f"{user['username']} has {total} cookies:{NL}"
-
-            for release, count in by_release.items():
-                message = message + f" * Fedora {release}: {count} cookies{NL}"
-
-            await evt.respond(message)
-
+            user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
+
+        total, by_release = await self._get_cookie_totals(user["username"])
+
+        if not total:
+            await evt.respond(f"{user['username']} has no cookies")
+            return
+
+        message = f"{user['username']} has {total} cookies:{NL}"
+
+        for release, count in by_release.items():
+            message = message + f" * Fedora {release}: {count} cookies{NL}"
+
+        await evt.respond(message)

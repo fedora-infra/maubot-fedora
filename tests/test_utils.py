@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from mautrix.util.async_db import Scheme
 
 import fedora
 
@@ -109,3 +110,11 @@ async def test_get_fasuser_double(bot, plugin, respx_mock, username, mention):
     with pytest.raises(fedora.exceptions.InfoGatherError) as exc:
         await fedora.utils.get_fasuser(username, message, plugin.fasjsonclient)
     assert str(exc.value) == "Sorry, I can only look up one username at a time"
+
+
+def test_get_rowcount_postgres():
+    class mock_db:
+        def __init__(self):
+            self.scheme = Scheme.POSTGRES
+
+    assert fedora.utils.get_rowcount(mock_db(), "row1 row2 row3 3") == 3

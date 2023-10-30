@@ -16,6 +16,7 @@ async def test_group_info(bot, plugin, respx_mock):
                 "result": {
                     "groupname": "dummygroup",
                     "description": "A test group",
+                    "irc": ["channel1", "channel2"],
                 }
             },
         )
@@ -27,22 +28,73 @@ async def test_group_info(bot, plugin, respx_mock):
         "**Description:** A test group\n "
         "**URL:** None,\n "
         "**Mailing List:** None\n "
-        "**Chat:** None"
+        "**Chat:** `channel1` and `channel2`"
     )
     assert bot.sent[0].content.body == expected
 
+    await bot.send("!group info")
+    assert len(bot.sent) == 2
+    assert (
+        bot.sent[1].content.body == "groupname argument is required. e.g. `!group info designteam`"
+    )
+
+
+async def test_group_info_notagroup(bot, plugin, respx_mock):
+    respx_mock.get("http://fasjson.example.com/v1/groups/notagroup/").mock(
+        return_value=httpx.Response(
+            404,
+        )
+    )
+    await bot.send("!group info notagroup")
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "Sorry, but group 'notagroup' does not exist"
+
 
 @pytest.mark.parametrize("membership_type", ["members", "sponsors"])
-async def test_group_members(bot, plugin, respx_mock, membership_type, monkeypatch):
-    respx_mock.get(f"http://fasjson.example.com/v1/groups/dummygroup/{membership_type}/").mock(
+@pytest.mark.parametrize("groupname", [None, "dummygroup"])
+async def test_group_members(bot, plugin, respx_mock, membership_type, groupname, monkeypatch):
+    respx_mock.get(f"http://fasjson.example.com/v1/groups/{groupname}/{membership_type}/").mock(
         return_value=httpx.Response(
             200, json={"result": [{"username": "member1"}, {"username": "member2"}]}
         ),
     )
     monkeypatch.setattr(bot.client, "get_joined_members", mock.AsyncMock(return_value=dict()))
-    await bot.send(f"!group {membership_type} dummygroup")
+    if groupname is None:
+        await bot.send(f"!group {membership_type}")
+        assert len(bot.sent) == 1
+        assert (
+            bot.sent[0].content.body
+            == "groupname argument is required. e.g. `!group members designteam`"
+        )
+    else:
+        await bot.send(f"!group {membership_type} {groupname}")
+        assert len(bot.sent) == 1
+        assert (
+            bot.sent[0].content.body
+            == f"{membership_type.title()} of {groupname}: member1, member2"
+        )
+
+
+async def test_group_members_notagroup(bot, plugin, respx_mock):
+    respx_mock.get("http://fasjson.example.com/v1/groups/notagroup/members/").mock(
+        return_value=httpx.Response(404),
+    )
+    await bot.send("!group members notagroup")
     assert len(bot.sent) == 1
-    assert bot.sent[0].content.body == f"{membership_type.title()} of dummygroup: member1, member2"
+    assert bot.sent[0].content.body == "Sorry, but group 'notagroup' does not exist"
+
+
+async def test_group_members_massive_group(bot, plugin, respx_mock):
+    respx_mock.get("http://fasjson.example.com/v1/groups/massivegroup/members/").mock(
+        return_value=httpx.Response(
+            200, json={"result": [{"username": f"member{n}"} for n in range(1, 300)]}
+        ),
+    )
+    await bot.send("!group members massivegroup")
+    assert len(bot.sent) == 1
+    assert (
+        bot.sent[0].content.body == "massivegroup has 299 members and thats too many to dump here"
+    )
 
 
 async def test_group_members_mentions(bot, plugin, respx_mock, monkeypatch):
@@ -135,6 +187,28 @@ async def test_user_hello(bot, plugin, respx_mock, pronouns, alias):
     assert bot.sent[0].content.body == expected
 
 
+@pytest.mark.parametrize("command", ["hello", "info", "localtime"])
+async def test_user_notfound(bot, plugin, respx_mock, command):
+    respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
+        return_value=httpx.Response(
+            404,
+        )
+    )
+    await bot.send(f"!user {command} dummy")
+
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "Sorry, but Fedora Accounts user 'dummy' does not exist"
+
+
+async def test_user_is_none(bot, plugin, monkeypatch):
+    mock_get_fasuser = mock.AsyncMock(return_value=None)
+    monkeypatch.setattr(fedora.fas, "get_fasuser", mock_get_fasuser)
+    await bot.send("!user hello dummy")
+
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "Cound not find this Fedora Account: dummy"
+
+
 @pytest.mark.parametrize("alias", [None, "hi", "hello", "hello2", "hellomynameis"])
 async def test_hello_with_username(bot, plugin, respx_mock, alias):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy2/").mock(
@@ -162,14 +236,23 @@ async def test_hello_with_username(bot, plugin, respx_mock, alias):
     assert bot.sent[0].content.body == "Dummy User 2 (dummy2)"
 
 
-async def test_localtime(bot, plugin, respx_mock, monkeypatch):
+@pytest.mark.parametrize(
+    "tz,response",
+    [
+        ("Europe/Paris", 'The current local time of "dummy" is: '),
+        ("Cookieland/BiscuitTown", 'The timezone of "dummy" was unknown: "Cookieland/BiscuitTown"'),
+        (None, 'User "dummy" doesn\'t share their timezone'),
+    ],
+)
+@pytest.mark.parametrize("command", ["!user localtime dummy", "!localtime dummy"])
+async def test_localtime(bot, plugin, respx_mock, monkeypatch, tz, response, command):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
             json={
                 "result": {
                     "username": "dummy",
-                    "timezone": "Europe/Paris",
+                    "timezone": tz,
                 }
             },
         )
@@ -178,13 +261,13 @@ async def test_localtime(bot, plugin, respx_mock, monkeypatch):
     datetime_mock = mock.MagicMock(wraps=datetime)
     datetime_mock.now.side_effect = fake_now.astimezone
     monkeypatch.setattr(fedora.fas, "datetime", datetime_mock)
-    await bot.send("!localtime dummy")
+    await bot.send(command)
     assert len(bot.sent) == 1
-    expected_time = fake_now.astimezone(pytz.timezone("Europe/Paris"))
-    expected = (
-        f'The current local time of "dummy" is: "{expected_time.strftime("%H:%M")}" '
-        "(timezone: Europe/Paris)"
-    )
+    if bot.sent[0].content.body.startswith('The current local time of "dummy" is: '):
+        expected_time = fake_now.astimezone(pytz.timezone(tz))
+        expected = f'{response}"{expected_time.strftime("%H:%M")}" (timezone: {tz})'
+    else:
+        expected = f"> <@dummy:example.com> {command}\n\n{response}"
     assert bot.sent[0].content.body == expected
 
 

@@ -217,3 +217,5 @@ class FasHandler(Handler):
             await self._user_info(evt, arguments)
         elif cmd in ["localtime"]:
             await self._user_localtime(evt, arguments)
+        else:
+            return  # pragma: no cover

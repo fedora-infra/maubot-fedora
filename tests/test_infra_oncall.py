@@ -1,5 +1,9 @@
+from unittest import mock
+
 import httpx
 import pytest
+
+import fedora
 
 
 async def test_oncall_alias(bot, plugin):
@@ -43,14 +47,15 @@ async def test_oncall_list(bot, plugin, db, freeze_datetime, listcommands):
     assert bot.sent[0].content.body == expected
 
 
-async def test_oncall_add(bot, plugin, db, respx_mock):
+@pytest.mark.parametrize("ircnick", ["irc:///dummyirc", "matrix://example.com/dummymx"])
+async def test_oncall_add(bot, plugin, db, respx_mock, ircnick):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
             json={
                 "result": {
                     "username": "dummy",
-                    "ircnicks": ["irc:///dummyirc", "matrix://example.com/dummymx"],
+                    "ircnicks": [ircnick],
                 }
             },
         )
@@ -62,7 +67,10 @@ async def test_oncall_add(bot, plugin, db, respx_mock):
     current_value = await db.fetch("SELECT * FROM oncall")
     assert len(current_value) == 1
     assert current_value[0]["username"] == "dummy"
-    assert current_value[0]["mxid"] == "@dummymx:example.com"
+    if ircnick == "irc:///dummyirc":
+        assert current_value[0]["mxid"] == "@dummy:fedora.im"
+    else:
+        assert current_value[0]["mxid"] == "@dummymx:example.com"
 
 
 async def test_oncall_add_empty(bot, plugin, db, respx_mock):
@@ -178,14 +186,15 @@ async def test_oncall_remove_wrong_room(bot, plugin, db, respx_mock):
     assert len(current_value) == 0
 
 
-async def test_oncall_remove_absent(bot, plugin, db, respx_mock):
+@pytest.mark.parametrize("ircnick", ["irc:///dummyirc", "matrix://example.com/dummymx"])
+async def test_oncall_remove_absent(bot, plugin, db, respx_mock, ircnick):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
             json={
                 "result": {
                     "username": "dummy",
-                    "ircnicks": ["irc:///dummyirc", "matrix://example.com/dummymx"],
+                    "ircnicks": [ircnick],
                 }
             },
         )
@@ -197,3 +206,46 @@ async def test_oncall_remove_absent(bot, plugin, db, respx_mock):
         "the oncall list"
     )
     assert bot.sent[0].content.body == expected
+
+
+@pytest.mark.parametrize("command", ["!infra oncall remove foobar", "!infra oncall add foobar"])
+async def test_infraoncall_get_fasuser_infogathererror(
+    bot, plugin, monkeypatch, respx_mock, command
+):
+    errormessage = "coconuts have water in them"
+    mock_get_fasuser = mock.AsyncMock(side_effect=fedora.exceptions.InfoGatherError(errormessage))
+    monkeypatch.setattr(fedora.infra, "get_fasuser", mock_get_fasuser)
+    respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
+        return_value=httpx.Response(
+            200,
+            json={},
+        )
+    )
+    await bot.send(command, room_id="controlroom")
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == errormessage
+    mock_get_fasuser.assert_called_once()
+
+
+async def test_oncall_remove_unexpected_rowcount(bot, plugin, db, monkeypatch, respx_mock):
+    mock_get_rowcount = mock.Mock(return_value=2)
+    monkeypatch.setattr(fedora.infra, "get_rowcount", mock_get_rowcount)
+    respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "result": {
+                    "username": "dummy",
+                    "ircnicks": ["irc:///dummyirc"],
+                }
+            },
+        )
+    )
+    await bot.send("!infra oncall remove dummy", room_id="controlroom")
+    assert len(bot.sent) == 1
+    mock_get_rowcount.assert_called_once()
+    expected = (
+        "> <@dummy:example.com> !infra oncall remove dummy\n\n"
+        "Unexpected response trying to remove user:"
+    )
+    assert bot.sent[0].content.body.startswith(expected)
