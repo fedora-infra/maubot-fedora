@@ -25,6 +25,8 @@ async def test_help(bot, plugin):
         "● `!user  <subcommand> [...]` - Get information about Fedora Accounts users\n"
         "● `!infra  <subcommand> [...]` - Fedora Infrastructure commands\n"
         "● `!bug <bug_id>` - return a bugzilla bug\n"
+        "● `!nextmeeting <room>` - Get the next meeting in a room\n"
+        "● `!nextmeetings <room>` - Get the next 3 meetings in a room\n"
         "● `!cookie  <subcommand> [...]` - Commands for the cookie system"
     )
     assert bot.sent[0].content.body == expected
