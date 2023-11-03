@@ -8,7 +8,7 @@ from mautrix.types import EventType, MessageType
 from .clients.bodhi import BodhiClient
 from .constants import NL
 from .db import UNIQUE_ERROR
-from .exceptions import InfoGatherError
+from .exceptions import InfoGatherError, InvalidInput
 from .handler import Handler
 from .utils import get_fasuser, get_fasuser_from_matrix_id
 
@@ -41,7 +41,7 @@ class CookieHandler(Handler):
         try:
             to_user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
             response = await self.give(evt.sender, to_user["username"])
-        except InfoGatherError as e:
+        except (InfoGatherError, InvalidInput) as e:
             response = e.message
         await evt.respond(response)
 
@@ -57,7 +57,7 @@ class CookieHandler(Handler):
                 message_event.sender, self.plugin.fasjsonclient
             )
             response = await self.give(evt.sender, to_user["username"])
-        except InfoGatherError as e:
+        except (InfoGatherError, InvalidInput) as e:
             response = e.message
         await self.plugin.client.send_notice(evt.room_id, text=response)
 
@@ -101,6 +101,8 @@ class CookieHandler(Handler):
     async def give(self, sender: str, to_user: str) -> None:
         from_user = await get_fasuser_from_matrix_id(sender, self.plugin.fasjsonclient)
         from_user = from_user["username"]
+        if from_user == to_user:
+            raise InvalidInput("You can't give a cookie to yourself")
         current_release = await self.bodhi.get_current_release()
         current_release = str(current_release["version"])
         dbq = """
@@ -140,7 +142,7 @@ class CookieHandler(Handler):
         try:
             to_user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
             response = await self.give(evt.sender, to_user["username"])
-        except InfoGatherError as e:
+        except (InfoGatherError, InvalidInput) as e:
             response = e.message
         await evt.respond(response)
 
