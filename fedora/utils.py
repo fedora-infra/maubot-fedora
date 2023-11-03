@@ -53,9 +53,7 @@ async def get_fasuser_from_matrix_id(matrix_id: str, fasjson: FasjsonClient):
 async def get_fasuser(username: str, evt: MessageEvent, fasjson: FasjsonClient):
     matrix_id = get_matrix_id(username, evt)
     if matrix_id:
-        user = await get_fasuser_from_matrix_id(matrix_id, fasjson)
-        if user is not None:
-            return user
+        return await get_fasuser_from_matrix_id(matrix_id, fasjson)
     # We haven't found a matrix ID.
     # Assume we were given a FAS / Fedora Account ID and use that
     return await fasjson.get_user(username)
