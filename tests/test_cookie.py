@@ -143,6 +143,30 @@ async def test_cookie_give_twice(bot, plugin, respx_mock, db):
     )
 
 
+async def test_cookie_give_myself(bot, plugin, respx_mock, db):
+    _mock_user(respx_mock, "dummy")
+    respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "releases": [
+                    {
+                        "version": "38",
+                        "id_prefix": "FEDORA",
+                        "eol": "2024-05-14",
+                    },
+                ],
+            },
+        )
+    )
+
+    await bot.send("dummy++")
+    given = await db.fetchval("SELECT COUNT(*) FROM cookies WHERE to_user = 'dummy'")
+    assert given == 0
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "You can't give a cookie to yourself"
+
+
 async def test_cookie_count(bot, plugin, respx_mock, db):
     _mock_user(respx_mock, "foobar")
 
@@ -210,3 +234,51 @@ async def test_cookie_react(bot, plugin, respx_mock, emoji):
         )
     else:
         assert len(bot.sent) == 0
+
+
+async def test_cookie_react_myself(bot, plugin, respx_mock, db):
+    _mock_user(respx_mock, "dummy")
+    respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "releases": [
+                    {
+                        "name": "F38",
+                        "long_name": "Fedora 38",
+                        "version": "38",
+                        "id_prefix": "FEDORA",
+                        "eol": "2024-05-14",
+                    },
+                ],
+                "page": 1,
+                "pages": 1,
+                "rows_per_page": 20,
+                "total": 1,
+            },
+        )
+    )
+    orig_message = MessageEvent(
+        type=EventType.Class.MESSAGE,
+        room_id="dummy-room-id",
+        event_id="dummy-event-id",
+        timestamp=time.time(),
+        sender="@dummy:example.com",
+        content=TextMessageEventContent(),
+    )
+    bot.client.get_event = mock.AsyncMock(return_value=orig_message)
+    event = ReactionEvent(
+        type=EventType.REACTION,
+        room_id="dummy-room-id",
+        event_id="dummy-reaction-event-id",
+        timestamp=time.time(),
+        sender="@dummy:example.com",
+        content=ReactionEventContent(
+            relates_to=RelatesTo(event_id="dummy-event-id", key=fedora.cookie.COOKIE_EMOJI)
+        ),
+    )
+    await bot.dispatch(EventType.REACTION, event)
+    given = await db.fetchval("SELECT COUNT(*) FROM cookies WHERE to_user = 'dummy'")
+    assert given == 0
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == "You can't give a cookie to yourself"
