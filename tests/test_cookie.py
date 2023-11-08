@@ -75,8 +75,8 @@ async def test_cookie_give(bot, plugin, respx_mock, give_command):
     await bot.send(give_command)
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == (
-        "dummy gave a cookie to foobar. They now have 1 cookie(s), "
-        "1 of which were obtained in the Fedora 38 release cycle"
+        "dummy gave a cookie to foobar. They now have 1 cookie, "
+        "1 of which was obtained in the Fedora 38 release cycle"
     )
 
 
@@ -205,8 +205,8 @@ async def test_cookie_react(bot, plugin, respx_mock, emoji):
     if is_cookie_emoji:
         assert len(bot.sent) == 1
         assert bot.sent[0].content.body == (
-            "dummy gave a cookie to foobar. They now have 1 cookie(s), "
-            "1 of which were obtained in the Fedora 38 release cycle"
+            "dummy gave a cookie to foobar. They now have 1 cookie, "
+            "1 of which was obtained in the Fedora 38 release cycle"
         )
     else:
         assert len(bot.sent) == 0
