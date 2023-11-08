@@ -117,8 +117,8 @@ async def test_cookie_give(bot, plugin, respx_mock, give_command, publish):
     await bot.send(give_command)
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == (
-        "dummy gave a cookie to foobar. They now have 1 cookie(s), "
-        "1 of which were obtained in the Fedora 38 release cycle"
+        "dummy gave a cookie to foobar. They now have 1 cookie, "
+        "1 of which was obtained in the Fedora 38 release cycle"
     )
     publish.assert_called_once()
     publish_call = publish.call_args[0]
@@ -239,8 +239,8 @@ async def test_cookie_react(bot, plugin, respx_mock, emoji, publish):
     if is_cookie_emoji:
         assert len(bot.sent) == 1
         assert bot.sent[0].content.body == (
-            "dummy gave a cookie to foobar. They now have 1 cookie(s), "
-            "1 of which were obtained in the Fedora 38 release cycle"
+            "dummy gave a cookie to foobar. They now have 1 cookie, "
+            "1 of which was obtained in the Fedora 38 release cycle"
         )
         publish.assert_called_once()
     else:
@@ -354,3 +354,31 @@ async def test_cookie_react_infogathererror(bot, plugin, respx_mock, monkeypatch
     mock_get_fasuser_from_matrix_id.assert_called_once()
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == errormessage
+
+
+async def test_cookie_give_message_plural(bot, plugin, respx_mock, db, publish):
+    _mock_user(respx_mock, "dummy")
+    _mock_user(respx_mock, "foobar")
+    respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "releases": [
+                    {
+                        "version": "38",
+                        "id_prefix": "FEDORA",
+                        "eol": "2024-05-14",
+                    },
+                ],
+            },
+        )
+    )
+    await db.execute(
+        "INSERT INTO cookies (from_user, to_user, release) " "VALUES ('dummytwo', 'foobar', '38')"
+    )
+    await bot.send("foobar++")
+    assert len(bot.sent) == 1
+    assert bot.sent[0].content.body == (
+        "dummy gave a cookie to foobar. They now have 2 cookies, "
+        "2 of which were obtained in the Fedora 38 release cycle"
+    )
