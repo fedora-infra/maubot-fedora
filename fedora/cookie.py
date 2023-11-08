@@ -124,7 +124,7 @@ class CookieHandler(Handler):
         total, by_release = await self._get_cookie_totals(to_user)
         return (
             f"{from_user} gave a cookie to {to_user}. They now "
-            f"have {total} cookie(s), {by_release[current_release]} of which were obtained "
+            f"have {total} cookie{'' if total==1 else 's'}, {by_release[current_release]} of which were obtained "
             f"in the Fedora {current_release} release cycle"
         )
 
