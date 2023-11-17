@@ -3,12 +3,14 @@ import re
 
 from maubot import MessageEvent
 from maubot.handlers import command, event
+from maubot_fedora_messages import GiveCookieV1
 from mautrix.types import EventType
 
 from .clients.bodhi import BodhiClient
 from .constants import NL
 from .db import UNIQUE_ERROR
 from .exceptions import InfoGatherError, InvalidInput
+from .fedmsg import publish
 from .handler import Handler
 from .utils import get_fasuser, get_fasuser_from_matrix_id, is_text_message
 
@@ -124,6 +126,16 @@ class CookieHandler(Handler):
                 f"F{current_release} timeframe"
             )
         total, by_release = await self._get_cookie_totals(to_user)
+        fm = GiveCookieV1(
+            body={
+                "sender": from_user,
+                "recipient": to_user,
+                "total": total,
+                "fedora_release": current_release,
+                "count_by_release": by_release,
+            }
+        )
+        await publish(fm)
         return (
             f"{from_user} gave a cookie to {to_user}. They now "
             f"have {total} cookie(s), {by_release[current_release]} of which were obtained "

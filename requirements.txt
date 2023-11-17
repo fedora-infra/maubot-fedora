@@ -1,7 +1,10 @@
 asyncpg
+backoff
+fedora-messaging
 httpx
 httpx_gssapi
 maubot
+maubot-fedora-messages
 mautrix
 pydantic
 pytz

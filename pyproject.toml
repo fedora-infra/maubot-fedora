@@ -77,5 +77,7 @@ showcontent = true
 [[tool.mypy.overrides]]
 module = [
     "httpx_gssapi",
+    "fedora_messaging",
+    "maubot_fedora_messages",
 ]
 ignore_missing_imports = true

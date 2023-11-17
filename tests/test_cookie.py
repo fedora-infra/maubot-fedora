@@ -4,6 +4,7 @@ from unittest import mock
 
 import httpx
 import pytest
+from fedora_messaging import message
 from mautrix.types import (
     EventType,
     MessageEvent,
@@ -14,6 +15,13 @@ from mautrix.types import (
 )
 
 import fedora
+
+
+@pytest.fixture
+def publish(monkeypatch):
+    mocked_call = mock.AsyncMock(side_effect=lambda message: message.validate())
+    monkeypatch.setattr("fedora.cookie.publish", mocked_call)
+    return mocked_call
 
 
 def _mock_user(respx_mock, username):
@@ -35,7 +43,7 @@ def _mock_user(respx_mock, username):
 
 
 @pytest.mark.parametrize("give_command", ["foobar++", "!cookie give foobar"])
-async def test_cookie_give(bot, plugin, respx_mock, give_command):
+async def test_cookie_give(bot, plugin, respx_mock, give_command, publish):
     _mock_user(respx_mock, "dummy")
     _mock_user(respx_mock, "foobar")
     respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
@@ -78,6 +86,21 @@ async def test_cookie_give(bot, plugin, respx_mock, give_command):
         "dummy gave a cookie to foobar. They now have 1 cookie(s), "
         "1 of which were obtained in the Fedora 38 release cycle"
     )
+    publish.assert_called_once()
+    publish_call = publish.call_args[0]
+    msg = publish_call[0]
+    assert isinstance(msg, message.Message)
+    assert msg.topic == "maubot.cookie.give.v1"
+    assert msg.body["sender"] == "dummy"
+    assert msg.body["recipient"] == "foobar"
+    assert msg.body["total"] == 1
+    assert msg.body == {
+        "sender": "dummy",
+        "recipient": "foobar",
+        "total": 1,
+        "fedora_release": "38",
+        "count_by_release": {"38": 1},
+    }
 
 
 @pytest.mark.parametrize(
@@ -184,7 +207,7 @@ async def test_cookie_count(bot, plugin, respx_mock, db):
 
 
 @pytest.mark.parametrize("emoji", [fedora.cookie.COOKIE_EMOJI, "🚀"])
-async def test_cookie_react(bot, plugin, respx_mock, emoji):
+async def test_cookie_react(bot, plugin, respx_mock, emoji, publish):
     _mock_user(respx_mock, "dummy")
     _mock_user(respx_mock, "foobar")
     respx_mock.get("http://bodhi.example.com/releases/", params={"state": "current"}).mock(
@@ -232,6 +255,7 @@ async def test_cookie_react(bot, plugin, respx_mock, emoji):
             "dummy gave a cookie to foobar. They now have 1 cookie(s), "
             "1 of which were obtained in the Fedora 38 release cycle"
         )
+        publish.assert_called_once()
     else:
         assert len(bot.sent) == 0
 
