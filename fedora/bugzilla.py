@@ -19,5 +19,6 @@ class BugzillaHandler(Handler):
         await evt.mark_read()
         result = await self.bugzillaclient.get_bug(bug_id)
         await evt.respond(
-            f"[RHBZ#{bug_id}](https://bugzilla.redhat.com/{bug_id}): {result['bugs'][0]['summary']}"
+            f"[RHBZ#{bug_id}](https://bugzilla.redhat.com/{bug_id}): "
+            f"[{result['bugs'][0]['component'][0]}]: {result['bugs'][0]['summary']}"
         )
