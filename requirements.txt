@@ -3,5 +3,4 @@ httpx
 httpx_gssapi
 maubot
 mautrix
-pydantic
 pytz
