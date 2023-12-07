@@ -1,4 +1,5 @@
 asyncpg
+arrow
 backoff
 fedora-messaging
 httpx
