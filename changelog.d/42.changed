@@ -1,3 +1,0 @@
-the component of a bugzilla bug is now included in the reply when using the !bug command.
-For example, previously where the reply was `RHBZ#2245223: Please update to 4.6.0` the !bug command
-will return `RHBZ#2245223: [python-pebble]: Please update to 4.6.0`
