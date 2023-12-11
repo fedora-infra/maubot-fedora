@@ -159,7 +159,7 @@ async def test_group_members_mentions(bot, plugin, respx_mock, monkeypatch):
 
 @pytest.mark.parametrize("pronouns", [None, ["they / them", "mx"]])
 @pytest.mark.parametrize("alias", [None, "hi", "hello", "hello2", "hellomynameis"])
-async def test_user_hello(bot, plugin, respx_mock, pronouns, alias):
+async def test_user_hello(bot, plugin, respx_mock, monkeypatch, pronouns, alias):
     fasuser = {
         "username": "dummy",
         "human_name": "Dummy User",
@@ -176,15 +176,27 @@ async def test_user_hello(bot, plugin, respx_mock, pronouns, alias):
         params={"ircnick__exact": "matrix://example.com/dummy"},
     ).mock(return_value=httpx.Response(200, json={"result": [fasuser]}))
 
+    monkeypatch.setattr(bot.client, "get_displayname", mock.AsyncMock(return_value="Dummy User"))
+
     if not alias:
         await bot.send("!user hello")
     else:
         await bot.send(f"!{alias}")
     assert len(bot.sent) == 1
-    expected = "Dummy User (dummy)"
+    expected = "Dummy User: Dummy User (dummy)"
+    expected_html = (
+        '<p><a href="https://matrix.to/#/@dummy:example.com">Dummy User</a>: '
+        "Dummy User (dummy)</p>\n"
+    )
     if pronouns:
-        expected = f"{expected} - {' or '.join(pronouns)}"
+        pronouns_string = " or ".join(pronouns)
+        expected = f"{expected} - {pronouns_string}"
+        expected_html = (
+            f'<p><a href="https://matrix.to/#/@dummy:example.com">Dummy User</a>: '
+            f"Dummy User (dummy) - {pronouns_string}</p>\n"
+        )
     assert bot.sent[0].content.body == expected
+    assert bot.sent[0].content.formatted_body == expected_html
 
 
 @pytest.mark.parametrize("command", ["hello", "info", "localtime"])
@@ -210,7 +222,7 @@ async def test_user_is_none(bot, plugin, monkeypatch):
 
 
 @pytest.mark.parametrize("alias", [None, "hi", "hello", "hello2", "hellomynameis"])
-async def test_hello_with_username(bot, plugin, respx_mock, alias):
+async def test_hello_with_username(bot, plugin, respx_mock, monkeypatch, alias):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy2/").mock(
         return_value=httpx.Response(
             200,
@@ -227,13 +239,19 @@ async def test_hello_with_username(bot, plugin, respx_mock, alias):
         "http://fasjson.example.com/v1/search/users/",
         params={"ircnick__exact": "matrix://example.com/dummy"},
     ).mock(return_value=httpx.Response(200, json={"result": []}))
-
+    monkeypatch.setattr(bot.client, "get_displayname", mock.AsyncMock(return_value="Dummy User"))
     if not alias:
         await bot.send("!user hello dummy2")
     else:
         await bot.send(f"!{alias} dummy2")
     assert len(bot.sent) == 1
-    assert bot.sent[0].content.body == "Dummy User 2 (dummy2)"
+    expected = "Dummy User: Dummy User 2 (dummy2)"
+    expected_html = (
+        '<p><a href="https://matrix.to/#/@dummy:example.com">'
+        "Dummy User</a>: Dummy User 2 (dummy2)</p>\n"
+    )
+    assert bot.sent[0].content.body == expected
+    assert bot.sent[0].content.formatted_body == expected_html
 
 
 @pytest.mark.parametrize(

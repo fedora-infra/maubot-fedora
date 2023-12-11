@@ -93,3 +93,8 @@ def is_text_message(content: BaseMessageEventContent | Obj) -> TypeGuard[TextMes
         # TextMessageEventContent can also be of MessageType.EMOTE, hence the second check
         and content.msgtype in {MessageType.TEXT, MessageType.NOTICE}
     )
+
+
+async def inline_reply(evt: MessageEvent, message: str):
+    displayname = await evt.client.get_displayname(evt.sender)
+    await evt.respond(f"{tag_user(evt.sender,name=displayname)}: {message}")
