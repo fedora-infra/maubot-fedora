@@ -36,13 +36,6 @@ def get_matrix_id(username: str, evt: MessageEvent):
     return None
 
 
-def matrix_id_to_username(matrix_id):
-    matrix_user_match = MATRIX_USER_RE.match(matrix_id)
-    if not matrix_user_match:
-        return matrix_id  # Already a username
-    return matrix_user_match.group(1)
-
-
 async def get_fasuser_from_matrix_id(matrix_id: str, fasjson: FasjsonClient):
     try:
         return await fasjson.get_users_by_matrix_id(matrix_id)
@@ -60,9 +53,7 @@ async def get_fasuser_from_matrix_id(matrix_id: str, fasjson: FasjsonClient):
 async def get_fasuser(username: str, evt: MessageEvent, fasjson: FasjsonClient):
     matrix_id = get_matrix_id(username, evt)
     if matrix_id:
-        user = await get_fasuser_from_matrix_id(matrix_id, fasjson)
-        if user is not None:
-            return user
+        return await get_fasuser_from_matrix_id(matrix_id, fasjson)
     # We haven't found a matrix ID.
     # Assume we were given a FAS / Fedora Account ID and use that
     return await fasjson.get_user(username)
@@ -102,3 +93,8 @@ def is_text_message(content: BaseMessageEventContent | Obj) -> TypeGuard[TextMes
         # TextMessageEventContent can also be of MessageType.EMOTE, hence the second check
         and content.msgtype in {MessageType.TEXT, MessageType.NOTICE}
     )
+
+
+async def inline_reply(evt: MessageEvent, message: str):
+    displayname = await evt.client.get_displayname(evt.sender)
+    await evt.respond(f"{tag_user(evt.sender,name=displayname)}: {message}")

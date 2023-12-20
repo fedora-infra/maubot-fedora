@@ -12,6 +12,33 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [0.4.0](https://github.com/fedora-infra/maubot-fedora/tree/0.4.0) - 2023-12-07
+
+
+### Added
+
+- Send a Fedora Messaging message when a cookie is given [#20](https://github.com/fedora-infra/maubot-fedora/issues/20)
+
+
+### Changed
+
+- Changed the `!oncall` command (and associated subcommands) to `!infra oncall`. Additionally, added
+  the new `!infra oncall list` command that returns the list of sysadmins that are on call, and this
+  command is now aliased to `!oncall` [#26](https://github.com/fedora-infra/maubot-fedora/issues/26)
+- added additional information to pagure ticket commands, including
+  assignee, ticket close status, and dates of opening, modification,
+  and closure. [#39](https://github.com/fedora-infra/maubot-fedora/issues/39)
+- the component of a bugzilla bug is now included in the reply when using the !bug command.
+  For example, previously where the reply was `RHBZ#2245223: Please update to 4.6.0` the !bug command
+  will return `RHBZ#2245223: [python-pebble]: Please update to 4.6.0` [#42](https://github.com/fedora-infra/maubot-fedora/issues/42)
+
+
+### Fixed
+
+- Don't allow users to give cookies to themselves [#16](https://github.com/fedora-infra/maubot-fedora/issues/16)
+- When gifting a cookie, the bot responds with "1 cookie" or "2 cookies"
+  instead of "1 cookie(s)" or "2 cookie(s)". [#36](https://github.com/fedora-infra/maubot-fedora/issues/36)
+
 ## [0.3.0](https://github.com/fedora-infra/maubot-fedora/tree/0.3.0) - 2023-10-24
 
 

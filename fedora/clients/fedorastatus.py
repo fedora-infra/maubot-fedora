@@ -1,7 +1,6 @@
 from typing import Literal
 
 import httpx
-from pydantic import validate_call
 
 from ..exceptions import InfoGatherError
 
@@ -22,7 +21,6 @@ class FedoraStatusClient:
                 f"Issue querying Fedora Status: {response.status_code}: {response.reason_phrase}"
             )
 
-    @validate_call
     async def get_outages(self, outagetype: Literal["ongoing", "planned", "resolved"]):
         outages = await self._get(
             f"/{outagetype}.json",

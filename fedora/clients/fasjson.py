@@ -25,11 +25,12 @@ class FasjsonClient:
             response = await client.get(self.baseurl + endpoint + "/", **kwargs)
             if response.status_code == 404:
                 raise NoResult(response)
-            elif response.status_code >= 400:
+            if response.status_code >= 400:
                 log.error(f"FASJSON response to {response.url}: {response.text}")
                 raise InfoGatherError(
                     f"Sorry, could not get info from FASJSON (code {response.status_code})"
                 )
+            pass
         return response
 
     async def get_group_membership(self, groupname, membership_type="members", params=None):

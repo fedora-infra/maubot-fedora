@@ -1,0 +1,23 @@
+# A sample configuration for fedora-messaging. This file is in the TOML format.
+amqp_url = "amqp://"
+passive_declares = false
+publish_exchange = "amq.topic"
+topic_prefix = ""
+
+[tls]
+ca_cert = "/etc/fedora-messaging/cacert.pem"
+keyfile = "/etc/fedora-messaging/key.pem"
+certfile = "/etc/fedora-messaging/cert.pem"
+
+[client_properties]
+app = "Maubot Fedora"
+
+[exchanges."amq.topic"]
+type = "topic"
+durable = true
+auto_delete = false
+arguments = {}
+
+[qos]
+prefetch_size = 0
+prefetch_count = 25

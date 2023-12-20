@@ -1,0 +1,4 @@
+ Previously, `!user hello` messages had no link back to the original command message. 
+ This caused confusion when multiple people called the same command around the 
+ same time. This commit adds an inline-reply (i.e the username of the person that issued 
+ the command) at the start of the message before the response.

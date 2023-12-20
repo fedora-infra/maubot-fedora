@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from mautrix.util.async_db import Scheme
 
 import fedora
 
@@ -34,14 +35,15 @@ async def test_get_matrix_id(bot, plugin, username, mention, expected):
         ("dummy2", None, "dummy2"),
         ("@dummy:example.com", None, None),
         ("@dummy2:example.com", None, "dummy2"),
-        ("Dummy", "@dummy:fedora.im", "dummy"),
+        ("Dummy", "@dummy:trusted.im", "dummy"),
         ("Dummy2", "@dummy2:example.com", "dummy2"),
         ("dummy", "@foobar:somewhere.com", None),
         ("Dummy", "@dummy:example.com", None),
         ("Dummy User", "@dummy:fedora.im", "dummy"),
     ],
 )
-async def test_get_fasuser(bot, plugin, respx_mock, username, mention, expected):
+async def test_get_fasuser(bot, plugin, respx_mock, username, mention, expected, monkeypatch):
+    monkeypatch.setattr(fedora.utils, "FAS_MATRIX_DOMAINS", ["fedora.im", "trusted.im"])
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
@@ -74,6 +76,11 @@ async def test_get_fasuser(bot, plugin, respx_mock, username, mention, expected)
             json={"result": [{"username": "dummy2"}]},
         )
     )
+    # No need for the matrix id to be set on a trusted domain
+    respx_mock.get(
+        "http://fasjson.example.com/v1/search/users/",
+        params={"ircnick__exact": "matrix://trusted.im/dummy"},
+    ).mock(return_value=no_result)
 
     message = make_message(f"!hello {username}")
     if mention:
@@ -109,3 +116,11 @@ async def test_get_fasuser_double(bot, plugin, respx_mock, username, mention):
     with pytest.raises(fedora.exceptions.InfoGatherError) as exc:
         await fedora.utils.get_fasuser(username, message, plugin.fasjsonclient)
     assert str(exc.value) == "Sorry, I can only look up one username at a time"
+
+
+def test_get_rowcount_postgres():
+    class mock_db:
+        def __init__(self):
+            self.scheme = Scheme.POSTGRES
+
+    assert fedora.utils.get_rowcount(mock_db(), "row1 row2 row3 3") == 3

@@ -1,6 +1,5 @@
 import httpx
 import pytest
-from pydantic import ValidationError
 
 from fedora.clients.fedorastatus import FedoraStatusClient
 from fedora.exceptions import InfoGatherError
@@ -29,12 +28,6 @@ async def test_get_outages(respx_mock):
     )
     response = await client.get_outages("ongoing")
     assert response == json_response
-
-
-async def test_invalid_outage_type():
-    client = FedoraStatusClient("http://status.example.com")
-    with pytest.raises(ValidationError, match="Input should be 'ongoing', 'planned' or 'resolved'"):
-        await client.get_outages("PANTS")
 
 
 async def test_error_response(respx_mock):

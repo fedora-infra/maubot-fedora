@@ -8,7 +8,7 @@ from maubot.handlers import command
 from .constants import NL
 from .exceptions import InfoGatherError
 from .handler import Handler
-from .utils import get_fasuser, matrix_ids_from_ircnicks, tag_user
+from .utils import get_fasuser, inline_reply, matrix_ids_from_ircnicks, tag_user
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class FasHandler(Handler):
         message = f"{user['human_name']} ({user['username']})"
         if pronouns := user.get("pronouns"):
             message += " - " + " or ".join(pronouns)
-        await evt.respond(message)
+        await inline_reply(evt, message)
 
     async def _user_info(self, evt: MessageEvent, username: str | None) -> None:
         await evt.mark_read()
@@ -217,3 +217,5 @@ class FasHandler(Handler):
             await self._user_info(evt, arguments)
         elif cmd in ["localtime"]:
             await self._user_localtime(evt, arguments)
+        else:
+            return  # pragma: no cover

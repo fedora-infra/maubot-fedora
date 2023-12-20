@@ -3,12 +3,14 @@ import re
 
 from maubot import MessageEvent
 from maubot.handlers import command, event
+from maubot_fedora_messages import GiveCookieV1
 from mautrix.types import EventType
 
 from .clients.bodhi import BodhiClient
 from .constants import NL
 from .db import UNIQUE_ERROR
-from .exceptions import InfoGatherError
+from .exceptions import InfoGatherError, InvalidInput
+from .fedmsg import publish
 from .handler import Handler
 from .utils import get_fasuser, get_fasuser_from_matrix_id, is_text_message
 
@@ -43,7 +45,7 @@ class CookieHandler(Handler):
         try:
             to_user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
             response = await self.give(evt.sender, to_user["username"])
-        except InfoGatherError as e:
+        except (InfoGatherError, InvalidInput) as e:
             response = e.message
         await evt.respond(response)
 
@@ -59,7 +61,7 @@ class CookieHandler(Handler):
                 message_event.sender, self.plugin.fasjsonclient
             )
             response = await self.give(evt.sender, to_user["username"])
-        except InfoGatherError as e:
+        except (InfoGatherError, InvalidInput) as e:
             response = e.message
         await self.plugin.client.send_notice(evt.room_id, text=response)
 
@@ -95,14 +97,11 @@ class CookieHandler(Handler):
 
         return total, by_release
 
-    async def _get_current_release_cookie_total(self, username, current_release):
-        dbq = "SELECT SUM(value) FROM cookies WHERE to_user = $1 AND release = $2"
-        total = await self.plugin.database.fetchval(dbq, username, current_release)
-        return total
-
     async def give(self, sender: str, to_user: str) -> str:
         from_user = await get_fasuser_from_matrix_id(sender, self.plugin.fasjsonclient)
         from_user = from_user["username"]
+        if from_user == to_user:
+            raise InvalidInput("You can't give a cookie to yourself")
         current_release = await self.bodhi.get_current_release()
         current_release = str(current_release["version"])
         dbq = """
@@ -118,13 +117,24 @@ class CookieHandler(Handler):
             )
         except UNIQUE_ERROR:
             return (
-                f"You have already given cookies to {to_user} during the "
+                f"{from_user} has already given cookies to {to_user} during the "
                 f"F{current_release} timeframe"
             )
         total, by_release = await self._get_cookie_totals(to_user)
+        fm = GiveCookieV1(
+            body={
+                "sender": from_user,
+                "recipient": to_user,
+                "total": total,
+                "fedora_release": current_release,
+                "count_by_release": by_release,
+            }
+        )
+        await publish(fm)
         return (
             f"{from_user} gave a cookie to {to_user}. They now "
-            f"have {total} cookie(s), {by_release[current_release]} of which were obtained "
+            f"have {total} cookie{'' if total==1 else 's'}, {by_release[current_release]} "
+            f"of which {'was' if total==1 else 'were'} obtained "
             f"in the Fedora {current_release} release cycle"
         )
 
@@ -141,28 +151,28 @@ class CookieHandler(Handler):
         try:
             to_user = await get_fasuser(username, evt, self.plugin.fasjsonclient)
             response = await self.give(evt.sender, to_user["username"])
-        except InfoGatherError as e:
+        except (InfoGatherError, InvalidInput) as e:
             response = e.message
         await evt.respond(response)
 
     @cookie.subcommand(name="count", help="Return the cookie count for a user")
     @command.argument("username", required=True)
     async def cookie_count(self, evt: MessageEvent, username: str) -> None:
-        user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         try:
-            total, by_release = await self._get_cookie_totals(user["username"])
-
-            if not total:
-                await evt.respond(f"{user['username']} has no cookies")
-                return
-
-            message = f"{user['username']} has {total} cookies:{NL}"
-
-            for release, count in by_release.items():
-                message = message + f" * Fedora {release}: {count} cookies{NL}"
-
-            await evt.respond(message)
-
+            user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
+
+        total, by_release = await self._get_cookie_totals(user["username"])
+
+        if not total:
+            await evt.respond(f"{user['username']} has no cookies")
+            return
+
+        message = f"{user['username']} has {total} cookies:{NL}"
+
+        for release, count in by_release.items():
+            message = message + f" * Fedora {release}: {count} cookies{NL}"
+
+        await evt.respond(message)
