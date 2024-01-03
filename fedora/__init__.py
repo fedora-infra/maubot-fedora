@@ -16,6 +16,7 @@ from .distgit import DistGitHandler
 from .fas import FasHandler
 from .infra import InfraHandler
 from .pagureio import PagureIOHandler
+from .fedocal import FedocalHandler
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class Fedora(Plugin):
         self.register_handler_class(FasHandler(self))
         self.register_handler_class(InfraHandler(self))
         self.register_handler_class(BugzillaHandler(self))
+        self.register_handler_class(FedocalHandler(self))
         self.register_handler_class(CookieHandler(self))
 
     async def stop(self) -> None:
