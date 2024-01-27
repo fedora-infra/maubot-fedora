@@ -6,6 +6,7 @@ import arrow
 import httpx
 
 from ..constants import NL
+from ..exceptions import InfoGatherError
 
 
 class FedocalClient:
@@ -19,7 +20,7 @@ class FedocalClient:
 
     def _check_errors(self, response):
         if response.status_code != 200:
-            raise Exception(f"FedoCal query issue: {response.json().get('message')}")
+            raise InfoGatherError("Issue occured while connecting to FedoCal...")
 
     async def _get_meetings(self):
         response = await self._get("meetings")
