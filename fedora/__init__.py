@@ -14,9 +14,9 @@ from .cookie import CookieHandler
 from .db import upgrade_table
 from .distgit import DistGitHandler
 from .fas import FasHandler
+from .fedocal import FedocalHandler
 from .infra import InfraHandler
 from .pagureio import PagureIOHandler
-from .fedocal import FedocalHandler
 
 log = logging.getLogger(__name__)
 
