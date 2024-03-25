@@ -172,3 +172,46 @@ async def test_get_users_by_matrix_id_multiple_users(monkeypatch):
         ),
     ):
         await client.get_users_by_matrix_id("@cookie:biscuit.test")
+
+
+@pytest.mark.parametrize(
+    "username,expected_url",
+    [
+        ("biscuit_eater", "users/biscuit_eater/groups"),
+    ],
+)
+async def test_get_user_groups(monkeypatch, username, expected_url):
+    result = ["group1", "group2"]
+    client = FasjsonClient("http://fasjson.example.com")
+    mock__get = mock.AsyncMock(
+        return_value=httpx.Response(
+            200,
+            json={"groups": result},
+        )
+    )
+    monkeypatch.setattr(client, "_get", mock__get)
+
+    response = await client.get_user_groups(username)
+    
+    groups = result
+    assert isinstance(groups, list)
+    assert all(group in result for group in groups)
+
+
+@pytest.mark.parametrize(
+    "errorcode,expected_result",
+    [
+        (404, "Sorry, but Fedora Accounts user 'biscuit_eater' does not exist"),
+        (403, "Sorry, could not get info from FASJSON (code 403)"),
+    ],
+)
+async def test_get_user_groups_errors(respx_mock, errorcode, expected_result):
+    client = FasjsonClient("http://fasjson.example.com")
+    respx_mock.get("http://fasjson.example.com").mock(
+        return_value=httpx.Response(
+            errorcode,
+            json={"result": "biscuits"},
+        )
+    )
+    with pytest.raises(InfoGatherError, match=(re.escape(expected_result))):
+        await client.get_user_groups("biscuit_eater")
