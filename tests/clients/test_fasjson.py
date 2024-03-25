@@ -192,7 +192,7 @@ async def test_get_user_groups(monkeypatch, username, expected_url):
     monkeypatch.setattr(client, "_get", mock__get)
 
     response = await client.get_user_groups(username)
-    
+
     groups = result
     assert isinstance(groups, list)
     assert all(group in result for group in groups)

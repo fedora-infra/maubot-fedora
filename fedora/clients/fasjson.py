@@ -54,7 +54,7 @@ class FasjsonClient:
         return response.json().get("result")
 
     async def get_user(self, username, params=None):
-        """looks up a group by the groupname"""
+        """looks up a user by username"""
         try:
             response = await self._get("/".join(["users", username]), params=params)
         except NoResult as e:
@@ -64,7 +64,7 @@ class FasjsonClient:
         return response.json().get("result")
 
     async def search_users(self, params=None):
-        """looks up a group by the groupname"""
+        """looks up users given a search term"""
         response = await self._get("/".join(["search", "users"]), params=params)
         return response.json().get("result")
 
@@ -101,7 +101,7 @@ class FasjsonClient:
             )
 
         return searchresult[0]
-    
+
     async def get_user_groups(self, username, params=None):
         """
         Retrieves all groups a user belongs to, including membership type (member or sponsor).
@@ -128,7 +128,9 @@ class FasjsonClient:
             group_details = []
             for groupname in user_groups:
 
-                membership_type = await self.get_group_membership(groupname, "sponsors", params=params)
+                membership_type = await self.get_group_membership(
+                    groupname, "sponsors", params=params
+                )
 
                 if membership_type is None:
                     membership_type = "member"
@@ -140,7 +142,8 @@ class FasjsonClient:
             return group_details
 
         except NoResult as e:
-            raise InfoGatherError(f"Sorry, but Fedora Accounts user '{username}' does not exist") from e
+            raise InfoGatherError(
+                f"Sorry, but Fedora Accounts user '{username}' does not exist"
+            ) from e
         except InfoGatherError as e:
             raise
-
