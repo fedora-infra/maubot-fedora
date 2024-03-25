@@ -120,11 +120,12 @@ class FasHandler(Handler):
         await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
+            groups = await self.plugin.fasjsonclient.get_user_groups(user.get('username'))
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
 
-        await evt.respond(
+        respond_message = (
             f"User: {user.get('username')},{NL}"
             f"Name: {user.get('human_name')},{NL}"
             f"Pronouns: {' or '.join(user.get('pronouns') or ['unset'])},{NL}"
@@ -133,6 +134,11 @@ class FasHandler(Handler):
             f"Locale: {user.get('locale')},{NL}"
             f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])}{NL}"
         )
+
+        if groups:
+            respond_message += f"Groups : {', '.join(groups)}{NL}"
+
+        await evt.respond(respond_message)
 
     async def _user_localtime(self, evt: MessageEvent, username: str | None) -> None:
         await evt.mark_read()

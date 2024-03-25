@@ -303,6 +303,13 @@ async def test_user_info(bot, plugin, respx_mock, alias):
             },
         )
     )
+
+    respx_mock.get("http://fasjson.example.com/v1/users/dummy/groups/").mock(
+        return_value=httpx.Response(
+            200,
+            json={"groups": []},
+        )
+    )
     if not alias:
         await bot.send("!user info dummy")
     else:
