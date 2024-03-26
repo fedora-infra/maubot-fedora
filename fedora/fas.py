@@ -120,11 +120,12 @@ class FasHandler(Handler):
         await evt.mark_read()
         try:
             user = await get_fasuser(username or evt.sender, evt, self.plugin.fasjsonclient)
+            groups = await self.plugin.fasjsonclient.get_user_groups(user.get("username"))
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
 
-        await evt.respond(
+        respond_message = (
             f"User: {user.get('username')},{NL}"
             f"Name: {user.get('human_name')},{NL}"
             f"Pronouns: {' or '.join(user.get('pronouns') or ['unset'])},{NL}"
@@ -133,6 +134,11 @@ class FasHandler(Handler):
             f"Locale: {user.get('locale')},{NL}"
             f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])}{NL}"
         )
+
+        if groups:
+            respond_message += f"Groups : {', '.join(groups)}{NL}"
+
+        await evt.respond(respond_message)
 
     async def _user_localtime(self, evt: MessageEvent, username: str | None) -> None:
         await evt.mark_read()
@@ -163,7 +169,10 @@ class FasHandler(Handler):
         """Query information about Fedora groups"""
         pass
 
-    @user.subcommand(name="hello", help="Return brief information about a Fedora user.")
+    @user.subcommand(
+        name="hello",
+        help="Return brief information about a Fedora user, including username, name, and pronouns (if available).",
+    )
     @command.argument("username", pass_raw=True, required=False)
     async def user_hello(self, evt: MessageEvent, username: str | None) -> None:
         """
@@ -178,11 +187,14 @@ class FasHandler(Handler):
         """
         await self._user_hello(evt, username)
 
-    @user.subcommand(name="info", help="Return brief information about a Fedora user.")
+    @user.subcommand(
+        name="info",
+        help="Return detailed information about a Fedora user, including username, human name, pronouns, creation date, timezone, locale, and GPG key IDs.",
+    )
     @command.argument("username", pass_raw=True, required=False)
     async def user_info(self, evt: MessageEvent, username: str | None) -> None:
         """
-        Returns a information from Fedora Accounts about the user
+        Returns information from Fedora Accounts about the user
         If no username is provided, defaults to the sender of the message.
 
         #### Arguments ####
