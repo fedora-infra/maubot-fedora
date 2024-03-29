@@ -127,17 +127,19 @@ class FasjsonClient:
 
             group_details = []
             for groupname in user_groups:
-                #Fix - i realized at some point that get group membership, just returns members/sponsors in a group
-                sponsors = await self.get_group_membership(
-                    groupname, "sponsors", params=params
-                )
+                # Fix - i realized at some point that get group membership, just returns members/sponsors in a group
+                sponsors = await self.get_group_membership(groupname, "sponsors", params=params)
 
+            if sponsors is not None:
                 if username in sponsors:
                     membership_type = "sponsor"
                 else:
                     membership_type = "member"
+            else:
+                # Handle the case when sponsors is None (no sponsors for the group)
+                membership_type = "member"
 
-                group_details.append({"groupname": groupname, "membership_type": membership_type})
+            group_details.append({"groupname": groupname, "membership_type": membership_type})
 
             return group_details
 

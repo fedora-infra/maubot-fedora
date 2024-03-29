@@ -136,7 +136,11 @@ class FasHandler(Handler):
         )
 
         if groups:
-            respond_message += f"Groups : {', '.join(groups)}{NL}"
+            group_info = [
+                f"Group: {group['groupname']} - Role: {group['membership_type']}"
+                for group in groups
+            ]
+            respond_message += f"User Groups: {', '.join(group_info)}{NL}"
 
         await evt.respond(respond_message)
 
