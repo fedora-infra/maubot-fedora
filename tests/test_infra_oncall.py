@@ -67,10 +67,14 @@ async def test_oncall_add(bot, plugin, db, respx_mock, ircnick):
     current_value = await db.fetch("SELECT * FROM oncall")
     assert len(current_value) == 1
     assert current_value[0]["username"] == "dummy"
-    if ircnick == "irc:///dummyirc":
-        assert current_value[0]["mxid"] == "@dummy:fedora.im"
-    else:
-        assert current_value[0]["mxid"] == "@dummymx:example.com"
+    assert (
+        current_value[0]["mxid"] == "@dummy:fedora.im"
+        if ircnick == "irc:///dummyirc"
+        else "@dummymx:example.com"
+    )
+
+    # Check if the timezone is set to UTC (default) when not provided by FAS
+    assert current_value[0]["timezone"] == "UTC"
 
 
 async def test_oncall_add_empty(bot, plugin, db, respx_mock):
