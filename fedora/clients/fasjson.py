@@ -115,7 +115,6 @@ class FasjsonClient:
                 - A list of dictionaries containing group information:
                     - groupname (str): Name of the group.
                     - membership_type (str): "member" or "sponsor" depending on the user's role.
-                - None (if the user is not found or there's an error).
 
         Raises:
             InfoGatherError: If there's an error fetching data from Fasjson or if the user is not found (404).
