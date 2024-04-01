@@ -137,51 +137,7 @@ class InfraHandler(Handler):
         else:
             await evt.reply(f"Unexpected response trying to remove user: {result}")
 
-    # @infra.subcommand(name="status", help="get a list of the ongoing and planned outages")
-    # async def infra_status(self, evt: MessageEvent) -> None:
-    #     def format_title(outage):
-    #         if outage.get("ticket"):
-    #             return f"**[{outage.get('title')}]({outage.get('ticket')['url']})**"
-    #         else:
-    #             return f"**{outage.get('title')}**"
-
-    #     ongoing = await self.fedorastatus.get_outages("ongoing")
-    #     ongoing = ongoing.get("outages", [])
-
-    #     planned = await self.fedorastatus.get_outages("planned")
-    #     planned = planned.get("outages", [])
-
-    #     message = f"I checked [Fedora Status]({self.fedorastatus_url}) and there are "
-    #     if not ongoing and not planned:
-    #         message = message + f"**no planned or ongoing outages on Fedora Infrastructure.**{NL}"
-    #     else:
-    #         message = message + (
-    #             f"**{len(ongoing)} ongoing** and **{len(planned)} planned** "
-    #             f"outages on Fedora Infrastructure.{NL}"
-    #         )
-    #         if ongoing:
-    #             message = message + f"##### Ongoing{NL}"
-    #             for outage in ongoing:
-    #                 message = message + f" * {format_title(outage)}{NL}"
-    #                 # TODO: Make these times relative (e.g. started 1 hour ago)
-    #                 message = message + f"   Started at: {outage['startdate']}{NL}"
-    #                 message = message + (
-    #                     f"   Estimated to end: "
-    #                     f"{outage['enddate'] if outage['enddate'] else 'Unknown'}{NL}"
-    #                 )
-    #         if planned:
-    #             message = message + f"##### Planned{NL}"
-    #             for outage in planned:
-    #                 message = message + f" * {format_title(outage)}{NL}"
-    #                 # TODO: Make these times relative (e.g. started 1 hour ago)
-    #                 message = message + f"   Scheduled to start at: {outage['startdate']}{NL}"
-    #                 message = message + (
-    #                     f"   Scheduled to end at: "
-    #                     f"{outage['enddate'] if outage['enddate'] else 'Unknown'}{NL}"
-    #                 )
-
-    #     await evt.respond(message)
-
+    @infra.subcommand(name="status", help="get a list of the ongoing and planned outages")
     async def infra_status(self, evt: MessageEvent) -> None:
         def format_title(outage):
             if outage.get("ticket"):
@@ -209,9 +165,9 @@ class InfraHandler(Handler):
         if ongoing:
             message += f"##### Ongoing{NL}"
             for outage in ongoing:
-                start_time = self.date_validation(outage.get("startdate"))
+                start_time = self.format_date(outage.get("startdate"))
                 end_time = (
-                    self.date_validation(outage.get("enddate"))
+                    self.format_date(outage.get("enddate"))
                     if outage.get("enddate") is not None
                     else None
                 )
@@ -225,7 +181,7 @@ class InfraHandler(Handler):
                 )
 
                 message += f" * {format_title(outage)}{NL}"
-                message += f"   Started : {relative_start_time}{NL}{start_time}"
+                message += f"   Started : {start_time} ({relative_start_time})"
 
                 message += (
                     f"   Estimated to end: "
@@ -238,11 +194,11 @@ class InfraHandler(Handler):
                 for outage in planned:
                     message += f" * {format_title(outage)}{NL}"
 
-                    start_time = self.date_validation(outage.get("startdate"))
+                    start_time = self.format_date(outage.get("startdate"))
                     relative_start_time = self.get_relative_time(start_time - now)
 
                     message += (
-                        f"   Scheduled to start :" + f"{start_time}" + f"{relative_start_time}{NL}"
+                        f"   Scheduled to start : {start_time} ({relative_start_time}){NL}"
                     )
                     message += (
                         f"   Estimated to end: "
@@ -252,7 +208,7 @@ class InfraHandler(Handler):
 
             await evt.respond(message)
 
-    def date_validation(self, date_string):
+    def format_date(self, date_string):
         date_format = "%Y-%m-%dT%H:%M:%S%z"
         date_string = datetime.datetime.strptime(date_string, date_format)
         return date_string
