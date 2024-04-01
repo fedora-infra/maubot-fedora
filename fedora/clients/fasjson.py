@@ -123,8 +123,13 @@ class FasjsonClient:
 
         try:
             response = await self._get("/".join(["users", username, "groups"]), params=params)
-            user_groups = response.json().get("groups", [])
+        except NoResult as e:
+            raise InfoGatherError(
+                f"Sorry, but Fedora Accounts user '{username}' does not exist"
+            ) from e
+        user_groups = response.json().get("groups", [])
 
+        try:
             group_details = []
             for groupname in user_groups:
                 # Fix - i realized at some point that get group membership, just returns members/sponsors in a group
@@ -142,10 +147,5 @@ class FasjsonClient:
             group_details.append({"groupname": groupname, "membership_type": membership_type})
 
             return group_details
-
-        except NoResult as e:
-            raise InfoGatherError(
-                f"Sorry, but Fedora Accounts user '{username}' does not exist"
-            ) from e
         except InfoGatherError as e:
             raise
