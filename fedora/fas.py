@@ -164,7 +164,7 @@ class FasHandler(Handler):
         pass
 
     @user.subcommand(
-        name="hello", 
+        name="hello",
         help=(
             "Return brief information about a Fedora user, including username,"
             " name, and pronouns (if available)."
@@ -185,7 +185,7 @@ class FasHandler(Handler):
         await self._user_hello(evt, username)
 
     @user.subcommand(
-        name="info", 
+        name="info",
         help=(
             "Return detailed information about a Fedora user, including username,"
             " human name, pronouns, creation date, timezone, locale, and GPG key IDs."
