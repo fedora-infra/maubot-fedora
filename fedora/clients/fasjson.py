@@ -135,7 +135,7 @@ class FasjsonClient:
 
                 membership_type = "member"
                 if sponsors is not None and username in sponsors:
-                        membership_type = "member"
+                    membership_type = "member"
 
                 group_details.append({"groupname": groupname, "membership_type": membership_type})
 
