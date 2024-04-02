@@ -174,6 +174,7 @@ class FasHandler(Handler):
         pass
 
     @user.subcommand(
+        name="hello",
         help=(
             "Return brief information about a Fedora user, including username,"
             " name, and pronouns (if available)."
