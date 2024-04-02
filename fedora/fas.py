@@ -174,8 +174,10 @@ class FasHandler(Handler):
         pass
 
     @user.subcommand(
-        name="hello",
-        help="Return brief information about a Fedora user, including username, name, and pronouns (if available).",
+        help=(
+            "Return brief information about a Fedora user, including username,"
+            " name, and pronouns (if available)."
+        ),
     )
     @command.argument("username", pass_raw=True, required=False)
     async def user_hello(self, evt: MessageEvent, username: str | None) -> None:
@@ -193,7 +195,10 @@ class FasHandler(Handler):
 
     @user.subcommand(
         name="info",
-        help="Return detailed information about a Fedora user, including username, human name, pronouns, creation date, timezone, locale, and GPG key IDs.",
+        help=(
+            "Return detailed information about a Fedora user, including username,"
+            " human name, pronouns, creation date, timezone, locale, and GPG key IDs."
+        ),
     )
     @command.argument("username", pass_raw=True, required=False)
     async def user_info(self, evt: MessageEvent, username: str | None) -> None:
