@@ -117,7 +117,8 @@ class FasjsonClient:
                     - membership_type (str): "member" or "sponsor" depending on the user's role.
 
         Raises
-            InfoGatherError: If there's an error fetching data from Fasjson or if the user is not found (404).
+            InfoGatherError: If there's an error fetching data from Fasjson or
+            if the user is not found (404).
         """
 
         try:
@@ -128,17 +129,14 @@ class FasjsonClient:
             ) from e
         user_groups = response.json().get("groups", [])
 
-        try:
-            group_details = []
-            for groupname in user_groups:
-                sponsors = await self.get_group_membership(groupname, "sponsors", params=params)
+        group_details = []
+        for groupname in user_groups:
+            sponsors = await self.get_group_membership(groupname, "sponsors", params=params)
 
-                membership_type = "member"
-                if sponsors is not None and username in sponsors:
-                    membership_type = "member"
+            membership_type = "Member"
+            if sponsors is not None and username in sponsors:
+                membership_type = "Sponsor"
 
-                group_details.append({"groupname": groupname, "membership_type": membership_type})
+            group_details.append({"groupname": groupname, "membership_type": membership_type})
 
-            return group_details
-        except InfoGatherError as e:
-            raise
+        return group_details

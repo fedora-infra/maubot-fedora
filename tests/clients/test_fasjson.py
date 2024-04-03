@@ -175,27 +175,48 @@ async def test_get_users_by_matrix_id_multiple_users(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "username,expected_url",
+    "username,expected_url,expected_groups",
     [
-        ("biscuit_eater", "users/biscuit_eater/groups"),
+        (
+            "biscuit_eater",
+            "users/biscuit_eater/groups",
+            [
+                {"groupname": "group1", "membership_type": "Member"},
+                {"groupname": "group2", "membership_type": "Member"},
+            ],
+        ),
+        (
+            "sponsor_user",
+            "users/sponsor_user/groups",
+            [
+                {"groupname": "group1", "membership_type": "Sponsor"},
+                {"groupname": "group2", "membership_type": "Member"},
+            ],
+        ),
     ],
 )
-async def test_get_user_groups(monkeypatch, username, expected_url):
-    result = ["group1", "group2"]
+async def test_get_user_groups(monkeypatch, username, expected_url, expected_groups):
     client = FasjsonClient("http://fasjson.example.com")
+
     mock__get = mock.AsyncMock(
         return_value=httpx.Response(
             200,
-            json={"groups": result},
+            json={"groups": ["group1", "group2"]},
         )
     )
     monkeypatch.setattr(client, "_get", mock__get)
 
+    async def mock_get_group_membership(groupname, membership_type, params=None):
+        if username == "sponsor_user" and groupname == "group1":
+            return [username]
+        else:
+            return None
+
+    monkeypatch.setattr(client, "get_group_membership", mock_get_group_membership)
+
     response = await client.get_user_groups(username)
 
-    groups = result
-    assert isinstance(response, list)
-    assert all(group in result for group in groups)
+    assert response == expected_groups
 
 
 @pytest.mark.parametrize(
