@@ -289,6 +289,34 @@ async def test_localtime(bot, plugin, respx_mock, monkeypatch, tz, response, com
     assert bot.sent[0].content.body == expected
 
 
+@pytest.mark.parametrize(
+    "groups, expected_message",
+    [
+        ([], "User Groups: None\n"),
+        (
+            [{"groupname": "Fedora Apps", "membership_type": "Member"}],
+            "User Groups: Group: Fedora Apps - Role: Member\n",
+        ),
+        (
+            [
+                {"groupname": "Nmstate", "membership_type": "Member"},
+                {"groupname": "Fedora Apps", "membership_type": "Sponsor"},
+            ],
+            "User Groups: Group: Nmstate - Role: Member, Group: Fedora Apps - Role: Sponsor\n",
+        ),
+    ],
+)
+def test_build_user_groups_message(groups, expected_message):
+    NL = "\n"
+    respond_message = ""
+    group_info = [
+        f"Group: {group['groupname']} - Role: {group['membership_type']}" for group in groups
+    ]
+    respond_message += f"User Groups: {', '.join(group_info) if groups else 'None'}{NL}"
+
+    assert respond_message == expected_message
+
+
 @pytest.mark.parametrize("alias", [None, "fasinfo"])
 async def test_user_info(bot, plugin, respx_mock, alias):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
@@ -322,6 +350,11 @@ async def test_user_info(bot, plugin, respx_mock, alias):
         "Creation: None,\n "
         "Timezone: None,\n "
         "Locale: None,\n "
-        "GPG Key IDs: None"
+        "GPG Key IDs: None,\n "
+        "User Groups: None"
     )
+
+    print(bot.sent[0].content.body + "\n")
+    print(expected)
+
     assert bot.sent[0].content.body == expected

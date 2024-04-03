@@ -132,15 +132,14 @@ class FasHandler(Handler):
             f"Creation: {user.get('creation')},{NL}"
             f"Timezone: {user.get('timezone')},{NL}"
             f"Locale: {user.get('locale')},{NL}"
-            f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])}{NL}"
+            f"GPG Key IDs: {' and '.join(k for k in user['gpgkeyids'] or ['None'])},{NL}"
         )
 
-        if groups:
-            group_info = [
-                f"Group: {group['groupname']} - Role: {group['membership_type']}"
-                for group in groups
-            ]
-            respond_message += f"User Groups: {', '.join(group_info)}{NL}"
+        group_info = [
+            f"Group: {group['groupname']} - Role: {group['membership_type']}" for group in groups
+        ]
+
+        respond_message += f"User Groups: {', '.join(group_info) if groups else 'None'}{NL}"
 
         await evt.respond(respond_message)
 
