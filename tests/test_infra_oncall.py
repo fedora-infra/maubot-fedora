@@ -71,10 +71,7 @@ async def test_oncall_add(bot, plugin, db, respx_mock, ircnick, response):
     )
     await bot.send("!infra oncall add dummy", room_id="controlroom")
     assert len(bot.sent) == 1
-
-    expected_timezone = "UTC" if response.get("timezone") is None else response.get("timezone")
-    if expected_timezone:
-        expected_message = "dummy has been added to the oncall list"
+    expected_message = "dummy has been added to the oncall list"
     assert bot.sent[0].content.body == expected_message
 
     current_value = await db.fetch("SELECT * FROM oncall")
