@@ -101,10 +101,9 @@ class InfraHandler(Handler):
             # Just grab the first mxid in the users list on fas
             mxid = mxids[0]
         try:
-            timezone_to_insert = user.get("timezone")
-            if timezone_to_insert is None:
-                timezone_to_insert = "UTC"
-            await self.plugin.database.execute(dbq, fasusername, mxid, timezone_to_insert)
+            await self.plugin.database.execute(
+                dbq, fasusername, mxid, user.get("timezone", "UTC") or "UTC"
+            )
         except UNIQUE_ERROR:
             await evt.respond(f"{fasusername} is already on the oncall list")
             return

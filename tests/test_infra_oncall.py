@@ -47,30 +47,44 @@ async def test_oncall_list(bot, plugin, db, freeze_datetime, listcommands):
     assert bot.sent[0].content.body == expected
 
 
-@pytest.mark.parametrize("ircnick", ["irc:///dummyirc", "matrix://example.com/dummymx"])
-async def test_oncall_add(bot, plugin, db, respx_mock, ircnick):
+@pytest.fixture
+def ircnick(response):
+    if "ircnicks" in response and len(response["ircnicks"]) > 0:
+        return response["ircnicks"][0]
+    else:
+        return "irc:///dummyirc"
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"username": "dummy", "ircnicks": ["irc:///dummyirc"], "timezone": None},
+        {"username": "dummy", "ircnicks": ["matrix://example.com/dummymx"]},
+    ],
+)
+async def test_oncall_add(bot, plugin, db, respx_mock, ircnick, response):
     respx_mock.get("http://fasjson.example.com/v1/users/dummy/").mock(
         return_value=httpx.Response(
             200,
-            json={
-                "result": {
-                    "username": "dummy",
-                    "ircnicks": [ircnick],
-                }
-            },
+            json={"result": response},
         )
     )
     await bot.send("!infra oncall add dummy", room_id="controlroom")
     assert len(bot.sent) == 1
-    expected = "dummy has been added to the oncall list"
-    assert bot.sent[0].content.body == expected
+    expected_message = "dummy has been added to the oncall list"
+    assert bot.sent[0].content.body == expected_message
+
     current_value = await db.fetch("SELECT * FROM oncall")
     assert len(current_value) == 1
     assert current_value[0]["username"] == "dummy"
-    if ircnick == "irc:///dummyirc":
-        assert current_value[0]["mxid"] == "@dummy:fedora.im"
-    else:
-        assert current_value[0]["mxid"] == "@dummymx:example.com"
+    assert (
+        current_value[0]["mxid"] == "@dummy:fedora.im"
+        if ircnick == "irc:///dummyirc"
+        else "@dummymx:example.com"
+    )
+
+    # Check if the timezone is set to UTC (default) when not provided by FAS
+    assert current_value[0]["timezone"] == "UTC"
 
 
 async def test_oncall_add_empty(bot, plugin, db, respx_mock):
