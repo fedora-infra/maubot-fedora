@@ -144,7 +144,7 @@ class FasHandler(Handler):
 
         timezone_name = user["timezone"]
         if timezone_name is None:
-            await evt.reply('User "%s" doesn\'t share their timezone' % user.get("username"))
+            await evt.reply(f'User "{user.get("username")}" doesn\'t share their timezone')
             return
         try:
             time = datetime.now(pytz.timezone(timezone_name))
