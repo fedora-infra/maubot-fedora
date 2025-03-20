@@ -285,7 +285,7 @@ async def test_localtime(bot, plugin, respx_mock, monkeypatch, tz, response, com
         expected_time = fake_now.astimezone(pytz.timezone(tz))
         expected = f'{response}"{expected_time.strftime("%H:%M")}" (timezone: {tz})'
     else:
-        expected = f"> <@dummy:example.com> {command}\n\n{response}"
+        expected = response
     assert bot.sent[0].content.body == expected
 
 
