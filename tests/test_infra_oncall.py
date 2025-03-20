@@ -128,10 +128,7 @@ async def test_oncall_add_empty(bot, plugin, db, respx_mock):
 async def test_oncall_add_wrong_room(bot, plugin, db):
     await bot.send("!infra oncall add dummy")
     assert len(bot.sent) == 1
-    expected = (
-        "> <@dummy:example.com> !infra oncall add dummy\n\nSorry, adding to the oncall list can "
-        "only be done from the controlroom"
-    )
+    expected = "Sorry, adding to the oncall list can only be done from the controlroom"
     assert bot.sent[0].content.body == expected
     current_value = await db.fetch("SELECT COUNT(*) FROM oncall")
     assert current_value[0][0] == 0
@@ -179,10 +176,7 @@ async def test_oncall_remove(bot, plugin, db, respx_mock):
     )
     await bot.send("!infra oncall remove dummy", room_id="controlroom")
     assert len(bot.sent) == 1
-    expected = (
-        "> <@dummy:example.com> !infra oncall remove dummy\n\ndummy has been removed from "
-        "the oncall list"
-    )
+    expected = "dummy has been removed from the oncall list"
     assert bot.sent[0].content.body == expected
     current_value = await db.fetch("SELECT * FROM oncall")
     assert len(current_value) == 0
@@ -191,10 +185,7 @@ async def test_oncall_remove(bot, plugin, db, respx_mock):
 async def test_oncall_remove_wrong_room(bot, plugin, db, respx_mock):
     await bot.send("!infra oncall remove dummy")
     assert len(bot.sent) == 1
-    expected = (
-        "> <@dummy:example.com> !infra oncall remove dummy\n\n"
-        "Sorry, removing from the oncall list can only be done from the controlroom"
-    )
+    expected = "Sorry, removing from the oncall list can only be done from the controlroom"
     assert bot.sent[0].content.body == expected
     current_value = await db.fetch("SELECT * FROM oncall")
     assert len(current_value) == 0
@@ -215,10 +206,7 @@ async def test_oncall_remove_absent(bot, plugin, db, respx_mock, ircnick):
     )
     await bot.send("!infra oncall remove dummy", room_id="controlroom")
     assert len(bot.sent) == 1
-    expected = (
-        "> <@dummy:example.com> !infra oncall remove dummy\n\ndummy is not currently on "
-        "the oncall list"
-    )
+    expected = "dummy is not currently on the oncall list"
     assert bot.sent[0].content.body == expected
 
 
@@ -258,8 +246,5 @@ async def test_oncall_remove_unexpected_rowcount(bot, plugin, db, monkeypatch, r
     await bot.send("!infra oncall remove dummy", room_id="controlroom")
     assert len(bot.sent) == 1
     mock_get_rowcount.assert_called_once()
-    expected = (
-        "> <@dummy:example.com> !infra oncall remove dummy\n\n"
-        "Unexpected response trying to remove user:"
-    )
+    expected = "Unexpected response trying to remove user:"
     assert bot.sent[0].content.body.startswith(expected)
