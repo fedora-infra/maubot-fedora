@@ -14,6 +14,7 @@ from .cookie import CookieHandler
 from .db import upgrade_table
 from .distgit import DistGitHandler
 from .fas import FasHandler
+from .fedocal import FedocalHandler
 from .infra import InfraHandler
 from .pagureio import PagureIOHandler
 
@@ -34,6 +35,7 @@ class Fedora(Plugin):
         self.register_handler_class(FasHandler(self))
         self.register_handler_class(InfraHandler(self))
         self.register_handler_class(BugzillaHandler(self))
+        self.register_handler_class(FedocalHandler(self))
         self.register_handler_class(CookieHandler(self))
 
     async def stop(self) -> None:
