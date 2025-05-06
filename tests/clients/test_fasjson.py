@@ -172,3 +172,67 @@ async def test_get_users_by_matrix_id_multiple_users(monkeypatch):
         ),
     ):
         await client.get_users_by_matrix_id("@cookie:biscuit.test")
+
+
+@pytest.mark.parametrize(
+    "username,expected_url,expected_groups",
+    [
+        (
+            "biscuit_eater",
+            "users/biscuit_eater/groups",
+            [
+                {"groupname": "group1", "membership_type": "Member"},
+                {"groupname": "group2", "membership_type": "Member"},
+            ],
+        ),
+        (
+            "sponsor_user",
+            "users/sponsor_user/groups",
+            [
+                {"groupname": "group1", "membership_type": "Sponsor"},
+                {"groupname": "group2", "membership_type": "Member"},
+            ],
+        ),
+    ],
+)
+async def test_get_user_groups(monkeypatch, username, expected_url, expected_groups):
+    client = FasjsonClient("http://fasjson.example.com")
+
+    mock__get = mock.AsyncMock(
+        return_value=httpx.Response(
+            200,
+            json={"groups": ["group1", "group2"]},
+        )
+    )
+    monkeypatch.setattr(client, "_get", mock__get)
+
+    async def mock_get_group_membership(groupname, membership_type, params=None):
+        if username == "sponsor_user" and groupname == "group1":
+            return [username]
+        else:
+            return None
+
+    monkeypatch.setattr(client, "get_group_membership", mock_get_group_membership)
+
+    response = await client.get_user_groups(username)
+
+    assert response == expected_groups
+
+
+@pytest.mark.parametrize(
+    "errorcode,expected_result",
+    [
+        (404, "Sorry, but Fedora Accounts user 'biscuit_eater' does not exist"),
+        (403, "Sorry, could not get info from FASJSON (code 403)"),
+    ],
+)
+async def test_get_user_groups_errors(respx_mock, errorcode, expected_result):
+    client = FasjsonClient("http://fasjson.example.com")
+    respx_mock.get("http://fasjson.example.com").mock(
+        return_value=httpx.Response(
+            errorcode,
+            json={"result": "biscuits"},
+        )
+    )
+    with pytest.raises(InfoGatherError, match=(re.escape(expected_result))):
+        await client.get_user_groups("biscuit_eater")
