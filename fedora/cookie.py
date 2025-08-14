@@ -5,6 +5,7 @@ from maubot import MessageEvent
 from maubot.handlers import command, event
 from maubot_fedora_messages import GiveCookieV1
 from mautrix.types import EventType
+from urllib.parse import unquote
 
 from .clients.bodhi import BodhiClient
 from .constants import NL
@@ -98,6 +99,7 @@ class CookieHandler(Handler):
         return total, by_release
 
     async def give(self, sender: str, to_user: str) -> str:
+        sender = unquote(sender)
         from_user = await get_fasuser_from_matrix_id(sender, self.plugin.fasjsonclient)
         from_user = from_user["username"]
         if from_user == to_user:
