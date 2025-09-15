@@ -34,7 +34,7 @@ async def test_error_404(respx_mock):
     with pytest.raises(
         InfoGatherError,
         match=(
-            "Issue querying Bugzilla: 'biscuits' is not a valid bug number nor an alias to a bug."
+            r"Issue querying Bugzilla: 'biscuits' is not a valid bug number nor an alias to a bug."
         ),
     ):
         await client.get_bug("biscuits")

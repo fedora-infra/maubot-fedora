@@ -74,7 +74,7 @@ class PagureIOHandler(Handler):
 
     @command.passive(COMMAND_RE)
     async def aliases(self, evt: MessageEvent, match) -> None:
-        msg, cmd, arguments = match
+        _msg, cmd, arguments = match
         defined_aliases = self.plugin.config.get("pagureio_issue_aliases", {})
         if cmd in defined_aliases:
             await self._get_pagure_issue(evt, defined_aliases[cmd], arguments)
