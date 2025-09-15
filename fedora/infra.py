@@ -50,7 +50,7 @@ class InfraHandler(Handler):
 
     @command.passive(COMMAND_RE)
     async def alias_oncall(self, evt: MessageEvent, match) -> None:
-        msg, cmd, arguments = match
+        _msg, cmd, arguments = match
         if cmd != "oncall":
             return
         if arguments:

@@ -222,7 +222,7 @@ class FasHandler(Handler):
 
     @command.passive(r"^!(hi|hello|hello2|hellomynameis|fasinfo|localtime)(?:\s+|$)(.*)")
     async def aliases(self, evt: MessageEvent, match) -> None:
-        msg, cmd, arguments = match
+        _msg, cmd, arguments = match
         if cmd in ["hi", "hello", "hello2", "hellomynameis"]:
             await self._user_hello(evt, arguments)
         elif cmd in ["fasinfo"]:
