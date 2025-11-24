@@ -44,7 +44,7 @@ class Fedora(Plugin):
         return Config  # pragma: no cover
 
     def _get_handler_commands(self):
-        for cmd, _ignore in chain(*self.client.event_handlers.values()):
+        for cmd in chain(*self.client.event_handlers.values()):
             if not isinstance(cmd, command.CommandHandler):
                 continue
             func_mod = cmd.__mb_func__.__module__
