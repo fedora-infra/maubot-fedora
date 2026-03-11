@@ -47,6 +47,7 @@ async def plugin(bot, db):
     test_config = {
         "fasjson_url": "http://fasjson.example.com",
         "pagureio_url": "http://pagure.example.com",
+        "forgejo_url": "http://forgejo.example.com",
         "paguredistgit_url": "http://src.example.com",
         "bodhi_url": "http://bodhi.example.com",
         "fedorastatus_url": "http://status.example.com",

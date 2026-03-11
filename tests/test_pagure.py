@@ -12,7 +12,6 @@ import fedora
     [
         ("pagureissue dummy-project", "dummy-project"),
         ("fpc", "packaging-committee"),
-        ("epel", "epel"),
         ("fesco", "fesco"),
     ],
 )

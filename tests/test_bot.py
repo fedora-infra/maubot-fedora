@@ -20,6 +20,7 @@ async def test_help(bot, plugin):
         "● `!help [commandname]` - list commands\n"
         "● `!version ` - return information about this bot\n"
         "● `!pagureissue <project> <issue_id>` - return a pagure issue\n"
+        "● `!forgejoissue <namespace> <project> <issue_id>` - return a forgejo issue\n"
         "● `!whoowns <package>` - Retrieve the owner of a given package\n"
         "● `!group  <subcommand> [...]` - Query information about Fedora Accounts groups\n"
         "● `!user  <subcommand> [...]` - Get information about Fedora Accounts users\n"
