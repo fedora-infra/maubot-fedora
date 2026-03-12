@@ -10,11 +10,11 @@ import fedora
 @pytest.mark.parametrize(
     "command,namespace,project",
     [
-        ("forgejoissue dummy-namespace dummy-project", "dummy-namespace", "dummy-project"),
+        ("forge issue dummy-namespace dummy-project", "dummy-namespace", "dummy-project"),
         ("epel", "epel", "steering"),
     ],
 )
-async def test_forgejoissue(bot, plugin, respx_mock, command, namespace, project):
+async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project):
     user = {
         "html_url": "https://forge.fedoraproject.org/humaton",
         "full_name": "Tomáš Hrčka",
@@ -41,7 +41,7 @@ async def test_forgejoissue(bot, plugin, respx_mock, command, namespace, project
         "title": "When creating new epel release please include MDAPI",
         "user": user,
     }
-    respx_mock.get(f"http://forgejo.example.com/api/v1/repos/{namespace}/{project}/issues/42").mock(
+    respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/issues/42").mock(
         return_value=httpx.Response(
             200,
             json=response,
@@ -71,7 +71,7 @@ async def test_forgejoissue(bot, plugin, respx_mock, command, namespace, project
     response["state"] = "closed"
     response["updated_at"] = one_week_ago_ts
     response["assignee"] = user
-    respx_mock.get(f"http://forgejo.example.com/api/v1/repos/{namespace}/{project}/issues/42").mock(
+    respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/issues/42").mock(
         return_value=httpx.Response(
             200,
             json=response,
@@ -101,9 +101,9 @@ async def test_forgejoissue(bot, plugin, respx_mock, command, namespace, project
 
 async def test_issue_notfound(bot, plugin, respx_mock):
     respx_mock.get(
-        "http://forgejo.example.com/api/v1/repos/biscuits_namespace/biscuits_project/issues/44"
+        "http://forge.example.com/api/v1/repos/biscuits_namespace/biscuits_project/issues/44"
     ).mock(return_value=httpx.Response(404, json={"error": "Biscuits not Found Error"}))
-    await bot.send("!forgejoissue biscuits_namespace biscuits_project 44")
+    await bot.send("!forge issue biscuits_namespace biscuits_project 44")
 
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == "Issue querying Forgejo: Biscuits not Found Error"
@@ -112,27 +112,29 @@ async def test_issue_notfound(bot, plugin, respx_mock):
 @pytest.mark.parametrize(
     "command,result",
     [
-        ("!forgejoissue", ["", "", ""]),
-        ("!forgejoissue epel", ["epel", "", ""]),
-        ("!forgejoissue epel steering", ["epel", "steering", ""]),
-        ("!forgejoissue epel steering 1234", ["epel", "steering", "1234"]),
+        ("!forge", []),
+        ("!forge asdasd", []),
+        ("!forge issue", ["", "", ""]),
+        ("!forge issue epel", ["epel", "", ""]),
+        ("!forge issue epel steering", ["epel", "steering", ""]),
+        ("!forge issue epel steering 1234", ["epel", "steering", "1234"]),
         ("!epel", ["epel", "steering", ""]),
         ("!epel 1234", ["epel", "steering", "1234"]),
         ("!epeld 1234", []),
         ("a!epeld 1234", []),
         ("!epel 1234 1234", ["epel", "steering", "1234 1234"]),
+        ("!cookies 1234", []),
+        ("!tar 1234", []),
     ],
 )
-async def test_forgejoissue_regex(bot, plugin, monkeypatch, command, result):
-    mocked_get_forgejo_issue = mock.AsyncMock()
-    monkeypatch.setattr(
-        fedora.forgejo.ForgejoHandler, "_get_forgejo_issue", mocked_get_forgejo_issue
-    )
+async def test_forge_issue_regex(bot, plugin, monkeypatch, command, result):
+    mocked_get_forge_issue = mock.AsyncMock()
+    monkeypatch.setattr(fedora.forge.ForgeHandler, "_get_forge_issue", mocked_get_forge_issue)
     await bot.send(command)
     if result == []:
-        mocked_get_forgejo_issue.assert_not_called()
+        mocked_get_forge_issue.assert_not_called()
     else:
-        mocked_get_forgejo_issue.assert_called_once()
-        assert mocked_get_forgejo_issue.call_args[0][1] == result[0]
-        assert mocked_get_forgejo_issue.call_args[0][2] == result[1]
-        assert mocked_get_forgejo_issue.call_args[0][3] == result[2]
+        mocked_get_forge_issue.assert_called_once()
+        assert mocked_get_forge_issue.call_args[0][1] == result[0]
+        assert mocked_get_forge_issue.call_args[0][2] == result[1]
+        assert mocked_get_forge_issue.call_args[0][3] == result[2]

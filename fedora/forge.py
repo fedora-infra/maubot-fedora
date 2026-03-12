@@ -10,12 +10,12 @@ from .exceptions import InfoGatherError
 from .handler import Handler
 
 
-class ForgejoHandler(Handler):
+class ForgeHandler(Handler):
     def __init__(self, plugin):
         super().__init__(plugin)
-        self.forgejoclient = ForgejoClient(self.plugin.config["forgejo_url"])
+        self.forgejoclient = ForgejoClient(self.plugin.config["forge_url"])
 
-    async def _get_forgejo_issue(
+    async def _get_forge_issue(
         self, evt: MessageEvent, namespace: str, project: str, issue_id: str
     ) -> None:
         await evt.mark_read()
@@ -60,30 +60,37 @@ class ForgejoHandler(Handler):
             allow_html=True,
         )
 
-    @command.new(help="return a forgejo issue")
+    @command.new(help="Query information from Fedora Forge")
+    async def forge(self):
+        pass
+
+    @forge.subcommand(help="return a forge issue")
     @command.argument("namespace", required=True)
     @command.argument("project", required=True)
     @command.argument("issue_id", required=True)
-    async def forgejoissue(
-        self, evt: MessageEvent, namespace: str, project: str, issue_id: str
-    ) -> None:
+    async def issue(self, evt: MessageEvent, namespace: str, project: str, issue_id: str) -> None:
         """
-        Show a summary of a Forgejo issue
+        Show a summary of a Forge issue
 
         #### Arguments ####
 
-        * `namespace`: a namespace in forgejo
-        * `project`: a project in forgejo
+        * `namespace`: a namespace in forge
+        * `project`: a project in forge
         * `issue_id`: the issue number
 
         """
-        await self._get_forgejo_issue(evt, namespace, project, issue_id)
+        await self._get_forge_issue(evt, namespace, project, issue_id)
 
     @command.passive(COMMAND_RE)
     async def aliases(self, evt: MessageEvent, match) -> None:
         _msg, cmd, arguments = match
-        defined_aliases = self.plugin.config.get("forgejo_issue_aliases", {})
-        if cmd in defined_aliases:
-            await self._get_forgejo_issue(
-                evt, defined_aliases[cmd]["namespace"], defined_aliases[cmd]["project"], arguments
-            )
+        defined_aliases = self.plugin.config.get("forge_aliases", {})
+        if (
+            cmd in defined_aliases
+            and isinstance(defined_aliases[cmd], list)
+            and len(defined_aliases[cmd]) > 0
+        ):
+            if defined_aliases[cmd][0] == "issue":
+                await self._get_forge_issue(
+                    evt, defined_aliases[cmd][1], defined_aliases[cmd][2], arguments
+                )

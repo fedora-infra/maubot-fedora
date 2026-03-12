@@ -17,9 +17,9 @@ from fedora.exceptions import InfoGatherError
 async def test_get_issue(monkeypatch, namespace, project, issue_id, params, expected_url):
     issue = {
         "title": "Dummy Issue",
-        "html_url": f"http://forgejo.example.com/{expected_url}",
+        "html_url": f"http://forge.example.com/{expected_url}",
     }
-    client = ForgejoClient("http://forgejo.example.com")
+    client = ForgejoClient("http://forge.example.com")
     mock__get = mock.AsyncMock(
         return_value=httpx.Response(
             200,
@@ -41,8 +41,8 @@ async def test_get_issue(monkeypatch, namespace, project, issue_id, params, expe
     ],
 )
 async def test_errors(respx_mock, errorcode, expected_result):
-    client = ForgejoClient("http://forgejo.example.com")
-    respx_mock.get("http://forgejo.example.com").mock(
+    client = ForgejoClient("http://forge.example.com")
+    respx_mock.get("http://forge.example.com").mock(
         return_value=httpx.Response(
             errorcode,
             json={"error": "Issue not found", "error_code": "ENOISSUE"},

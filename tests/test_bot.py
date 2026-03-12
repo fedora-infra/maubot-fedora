@@ -20,13 +20,23 @@ async def test_help(bot, plugin):
         "● `!help [commandname]` - list commands\n"
         "● `!version ` - return information about this bot\n"
         "● `!pagureissue <project> <issue_id>` - return a pagure issue\n"
-        "● `!forgejoissue <namespace> <project> <issue_id>` - return a forgejo issue\n"
+        "● `!forge  <subcommand> [...]` - Query information from Fedora Forge\n"
         "● `!whoowns <package>` - Retrieve the owner of a given package\n"
         "● `!group  <subcommand> [...]` - Query information about Fedora Accounts groups\n"
         "● `!user  <subcommand> [...]` - Get information about Fedora Accounts users\n"
         "● `!infra  <subcommand> [...]` - Fedora Infrastructure commands\n"
         "● `!bug <bug_id>` - return a bugzilla bug\n"
         "● `!cookie  <subcommand> [...]` - Commands for the cookie system"
+    )
+    assert bot.sent[0].content.body == expected
+
+
+async def test_help_forge(bot, plugin):
+    await bot.send("!help forge")
+    assert len(bot.sent) == 1
+    expected = (
+        "**Usage:** !forge <subcommand> [...]\n\n"
+        "● issue <namespace> <project> <issue_id> - return a forge issue"
     )
     assert bot.sent[0].content.body == expected
 

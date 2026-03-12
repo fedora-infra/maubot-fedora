@@ -14,7 +14,7 @@ from .cookie import CookieHandler
 from .db import upgrade_table
 from .distgit import DistGitHandler
 from .fas import FasHandler
-from .forgejo import ForgejoHandler
+from .forge import ForgeHandler
 from .infra import InfraHandler
 from .pagureio import PagureIOHandler
 
@@ -31,7 +31,7 @@ class Fedora(Plugin):
         self.config.load_and_update()
         self.fasjsonclient = FasjsonClient(self.config["fasjson_url"])
         self.register_handler_class(PagureIOHandler(self))
-        self.register_handler_class(ForgejoHandler(self))
+        self.register_handler_class(ForgeHandler(self))
         self.register_handler_class(DistGitHandler(self))
         self.register_handler_class(FasHandler(self))
         self.register_handler_class(InfraHandler(self))
