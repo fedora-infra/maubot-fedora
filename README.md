@@ -16,6 +16,7 @@ maubot-fedora currently does the following actions:
 * `!version`
 * `!pagureissue <project> <issue_id>` - return a pagure issue
 * `!forge issue <project> <issue_id>` - return a forge issue
+* `!forge pr <project> <issue_id>` - return a forge pull request
 * `!whoowns <package>` - Retrieve the owner of a given package
 * `!group members <groupname>` - return the members of a group
 * `!group sponsors <groupname>` - return the sponsors of a group

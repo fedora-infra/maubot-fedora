@@ -34,6 +34,34 @@ async def test_get_issue(monkeypatch, namespace, project, issue_id, params, expe
 
 
 @pytest.mark.parametrize(
+    "namespace,project,pull_id,params,expected_url",
+    [
+        ("tin_of", "biscuits", "1234", None, "tin_of/biscuits/pulls/1234"),
+        ("tin_of", "biscuits", "1234", {"fakeparam": True}, "tin_of/biscuits/pulls/1234"),
+    ],
+)
+async def test_get_pull_request(monkeypatch, namespace, project, pull_id, params, expected_url):
+    pull_request = {
+        "title": "Dummy Pull Request",
+        "html_url": f"http://forge.example.com/{expected_url}",
+    }
+    client = ForgejoClient("http://forge.example.com")
+    mock__get = mock.AsyncMock(
+        return_value=httpx.Response(
+            200,
+            json=pull_request,
+        )
+    )
+    monkeypatch.setattr(client, "_get", mock__get)
+
+    pull_request_response = await client.get_pull_request(
+        project, pull_id, namespace, params=params
+    )
+    mock__get.assert_called_once_with(expected_url, params=params)
+    assert pull_request_response == pull_request
+
+
+@pytest.mark.parametrize(
     "errorcode,expected_result",
     [
         (404, "Issue querying Forgejo: Issue not found"),

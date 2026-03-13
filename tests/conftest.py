@@ -50,6 +50,7 @@ async def plugin(bot, db):
         "forge_url": "http://forge.example.com",
         "forge_aliases": {
             "epel": ["issue", "epel", "steering"],
+            "edpr": ["pr", "epel", "docs"],
             "cookies": ["assue", "tin", "bisquit"],
             "tar": [],
         },

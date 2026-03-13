@@ -27,3 +27,11 @@ class ForgejoClient:
         )
         self._check_errors(response)
         return response.json()
+
+    async def get_pull_request(self, project, pull_id, namespace, params=None):
+        response = await self._get(
+            "/".join(filter(None, [namespace, project, "pulls", pull_id])),
+            params=params,
+        )
+        self._check_errors(response)
+        return response.json()
