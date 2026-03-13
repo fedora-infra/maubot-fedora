@@ -74,7 +74,7 @@ class ForgeHandler(Handler):
         html_url = pull_request.get("html_url")
         state = pull_request.get("state")
         closed_at = pull_request.get("closed_at")
-        merged = pull_request.get("merged") == "true"
+        merged = pull_request.get("merged")
         merged_at = pull_request.get("merged_at")
         merged_by = (
             pull_request["merged_by"].get("username") if pull_request.get("merged_by") else None

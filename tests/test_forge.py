@@ -128,7 +128,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
         "id": 261,
         "updated_at": two_weeks_ago_ts,
         "milestone": None,
-        "merged": "false",
+        "merged": False,
         "state": "open",
         "labels": [],
         "title": "When creating new epel release please include MDAPI",
@@ -192,7 +192,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
     )
 
     # test a pull request that is closed, merged and assigned
-    response["merged"] = "true"
+    response["merged"] = True
     response["merged_at"] = one_week_ago_ts
     response["merged_by"] = user
     respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/pulls/42").mock(
