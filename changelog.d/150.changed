@@ -1,0 +1,6 @@
+Commands were added to handle issue/pulls links in forge.fedoraproject.org projects.
+!forge issue <project> <issue_id>` - return a forge issue
+!forge pr <project> <issue_id>` - return a forge pull request
+Additionally, the 'epel' 'ticket' (infra) and 'releng' commands were
+repointed to use this as all of those teams have moved to forge.fedoraproject.org.
+
