@@ -47,6 +47,13 @@ async def plugin(bot, db):
     test_config = {
         "fasjson_url": "http://fasjson.example.com",
         "pagureio_url": "http://pagure.example.com",
+        "forge_url": "http://forge.example.com",
+        "forge_aliases": {
+            "epel": ["issue", "epel", "steering"],
+            "edpr": ["pr", "epel", "docs"],
+            "cookies": ["assue", "tin", "bisquit"],
+            "tar": [],
+        },
         "paguredistgit_url": "http://src.example.com",
         "bodhi_url": "http://bodhi.example.com",
         "fedorastatus_url": "http://status.example.com",

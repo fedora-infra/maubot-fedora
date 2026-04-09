@@ -12,7 +12,6 @@ import fedora
     [
         ("pagureissue dummy-project", "dummy-project"),
         ("fpc", "packaging-committee"),
-        ("epel", "epel"),
         ("fesco", "fesco"),
     ],
 )
@@ -23,8 +22,12 @@ async def test_pagureissue(bot, plugin, respx_mock, command, project):
         "name": "humaton",
         "url_path": "user/humaton",
     }
-    two_weeks_ago_ts = int((datetime.datetime.utcnow() + datetime.timedelta(weeks=-2)).timestamp())
-    one_week_ago_ts = int((datetime.datetime.utcnow() + datetime.timedelta(weeks=-1)).timestamp())
+    two_weeks_ago_ts = int(
+        (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(weeks=-2)).timestamp()
+    )
+    one_week_ago_ts = int(
+        (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(weeks=-1)).timestamp()
+    )
     response = {
         "assignee": None,
         "blocks": [],
