@@ -12,6 +12,21 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [0.4.1](https://github.com/fedora-infra/maubot-fedora/tree/0.4.1) - 2026-04-09
+
+
+### Changed
+
+- Previously, `!user hello` messages had no link back to the original command message. 
+   This caused confusion when multiple people called the same command around the 
+   same time. This commit adds an inline-reply (i.e the username of the person that issued 
+   the command) at the start of the message before the response. [#46](https://github.com/fedora-infra/maubot-fedora/issues/46)
+- Commands were added to handle issue/pulls links in forge.fedoraproject.org projects.
+  !forge issue <project> <issue_id>` - return a forge issue
+  !forge pr <project> <issue_id>` - return a forge pull request
+  Additionally, the 'epel' 'ticket' (infra) and 'releng' commands were
+  repointed to use this as all of those teams have moved to forge.fedoraproject.org. [#150](https://github.com/fedora-infra/maubot-fedora/issues/150)
+
 ## [0.4.0](https://github.com/fedora-infra/maubot-fedora/tree/0.4.0) - 2023-12-07
 
 
