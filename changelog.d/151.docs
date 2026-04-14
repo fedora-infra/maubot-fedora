@@ -1,0 +1,3 @@
+Add missing parameters in the README for the !forge command
+Replace "namespace" keyword with "org/organization" in the !forge command implementation
+Changed !forge pr subcommand argument name to pull_id
