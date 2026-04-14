@@ -8,13 +8,13 @@ from fedora.exceptions import InfoGatherError
 
 
 @pytest.mark.parametrize(
-    "namespace,project,issue_id,params,expected_url",
+    "org,project,issue_id,params,expected_url",
     [
         ("tin_of", "biscuits", "1234", None, "tin_of/biscuits/issues/1234"),
         ("tin_of", "biscuits", "1234", {"fakeparam": True}, "tin_of/biscuits/issues/1234"),
     ],
 )
-async def test_get_issue(monkeypatch, namespace, project, issue_id, params, expected_url):
+async def test_get_issue(monkeypatch, org, project, issue_id, params, expected_url):
     issue = {
         "title": "Dummy Issue",
         "html_url": f"http://forge.example.com/{expected_url}",
@@ -28,19 +28,19 @@ async def test_get_issue(monkeypatch, namespace, project, issue_id, params, expe
     )
     monkeypatch.setattr(client, "_get", mock__get)
 
-    issue_response = await client.get_issue(project, issue_id, namespace, params=params)
+    issue_response = await client.get_issue(project, issue_id, org, params=params)
     mock__get.assert_called_once_with(expected_url, params=params)
     assert issue_response == issue
 
 
 @pytest.mark.parametrize(
-    "namespace,project,pull_id,params,expected_url",
+    "org,project,pull_id,params,expected_url",
     [
         ("tin_of", "biscuits", "1234", None, "tin_of/biscuits/pulls/1234"),
         ("tin_of", "biscuits", "1234", {"fakeparam": True}, "tin_of/biscuits/pulls/1234"),
     ],
 )
-async def test_get_pull_request(monkeypatch, namespace, project, pull_id, params, expected_url):
+async def test_get_pull_request(monkeypatch, org, project, pull_id, params, expected_url):
     pull_request = {
         "title": "Dummy Pull Request",
         "html_url": f"http://forge.example.com/{expected_url}",
@@ -54,9 +54,7 @@ async def test_get_pull_request(monkeypatch, namespace, project, pull_id, params
     )
     monkeypatch.setattr(client, "_get", mock__get)
 
-    pull_request_response = await client.get_pull_request(
-        project, pull_id, namespace, params=params
-    )
+    pull_request_response = await client.get_pull_request(project, pull_id, org, params=params)
     mock__get.assert_called_once_with(expected_url, params=params)
     assert pull_request_response == pull_request
 

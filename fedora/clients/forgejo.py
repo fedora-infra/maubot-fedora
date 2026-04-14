@@ -20,17 +20,17 @@ class ForgejoClient:
                 f"Issue querying Forgejo: {response.status_code}: {response.reason_phrase}"
             )
 
-    async def get_issue(self, project, issue_id, namespace, params=None):
+    async def get_issue(self, project, issue_id, org, params=None):
         response = await self._get(
-            "/".join(filter(None, [namespace, project, "issues", issue_id])),
+            "/".join(filter(None, [org, project, "issues", issue_id])),
             params=params,
         )
         self._check_errors(response)
         return response.json()
 
-    async def get_pull_request(self, project, pull_id, namespace, params=None):
+    async def get_pull_request(self, project, pull_id, org, params=None):
         response = await self._get(
-            "/".join(filter(None, [namespace, project, "pulls", pull_id])),
+            "/".join(filter(None, [org, project, "pulls", pull_id])),
             params=params,
         )
         self._check_errors(response)

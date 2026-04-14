@@ -36,8 +36,8 @@ async def test_help_forge(bot, plugin):
     assert len(bot.sent) == 1
     expected = (
         "**Usage:** !forge <subcommand> [...]\n\n"
-        "● issue <namespace> <project> <issue_id> - return a forge issue\n"
-        "● pr <namespace> <project> <issue_id> - return a forge pull request"
+        "● issue <org> <project> <issue_id> - return an issue from the forge\n"
+        "● pr <org> <project> <pull_id> - return a pull request from the forge"
     )
     assert bot.sent[0].content.body == expected
 

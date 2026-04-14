@@ -8,13 +8,13 @@ import fedora
 
 
 @pytest.mark.parametrize(
-    "command,namespace,project",
+    "command,org,project",
     [
-        ("forge issue dummy-namespace dummy-project", "dummy-namespace", "dummy-project"),
+        ("forge issue dummy-org dummy-project", "dummy-org", "dummy-project"),
         ("epel", "epel", "steering"),
     ],
 )
-async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project):
+async def test_forge_issue(bot, plugin, respx_mock, command, org, project):
     user = {
         "html_url": "https://forge.fedoraproject.org/humaton",
         "full_name": "Tomáš Hrčka",
@@ -32,7 +32,7 @@ async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project)
         "comments": 0,
         "body": "Hi, \r\nafter the epel9 rwas created a",
         "created_at": two_weeks_ago_ts,
-        "html_url": f"https://forge.fedoraproject.org/{namespace}/{project}/issues/261",
+        "html_url": f"https://forge.fedoraproject.org/{org}/{project}/issues/261",
         "id": 261,
         "updated_at": two_weeks_ago_ts,
         "milestone": None,
@@ -41,7 +41,7 @@ async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project)
         "title": "When creating new epel release please include MDAPI",
         "user": user,
     }
-    respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/issues/42").mock(
+    respx_mock.get(f"http://forge.example.com/api/v1/repos/{org}/{project}/issues/42").mock(
         return_value=httpx.Response(
             200,
             json=response,
@@ -50,15 +50,15 @@ async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project)
     await bot.send(f"!{command} 42")
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == (
-        f"**{namespace}/{project} #42** (https://forge.fedoraproject.org/{namespace}/{project}/issues/261):"
+        f"**{org}/{project} #42** (https://forge.fedoraproject.org/{org}/{project}/issues/261):"
         f"**When creating new epel release please include MDAPI**\n\n"
         f"● **Opened:** 2 weeks ago by humaton\n"
         f"● **Last Updated:** Never\n"
         f"● **Assignee:** Not Assigned"
     )
     assert bot.sent[0].content.formatted_body == (
-        f'<p><a href="https://forge.fedoraproject.org/{namespace}/{project}/issues/261">'
-        f"<strong>{namespace}/{project} #42</strong></a>:"
+        f'<p><a href="https://forge.fedoraproject.org/{org}/{project}/issues/261">'
+        f"<strong>{org}/{project} #42</strong></a>:"
         f"<strong>When creating new epel release please include MDAPI</strong>"
         f"</p>\n<ul>\n"
         f"<li><strong>Opened:</strong> 2 weeks ago by humaton</li>\n"
@@ -71,7 +71,7 @@ async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project)
     response["state"] = "closed"
     response["updated_at"] = one_week_ago_ts
     response["assignee"] = user
-    respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/issues/42").mock(
+    respx_mock.get(f"http://forge.example.com/api/v1/repos/{org}/{project}/issues/42").mock(
         return_value=httpx.Response(
             200,
             json=response,
@@ -80,7 +80,7 @@ async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project)
     await bot.send(f"!{command} 42")
     assert len(bot.sent) == 2
     assert bot.sent[1].content.body == (
-        f"**{namespace}/{project} #42** (https://forge.fedoraproject.org/{namespace}/{project}/issues/261):"
+        f"**{org}/{project} #42** (https://forge.fedoraproject.org/{org}/{project}/issues/261):"
         f"**When creating new epel release please include MDAPI**\n\n"
         f"● **Closed** a week ago\n"
         f"● **Opened:** 2 weeks ago by humaton\n"
@@ -88,8 +88,8 @@ async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project)
         f"● **Assignee:** humaton"
     )
     assert bot.sent[1].content.formatted_body == (
-        f'<p><a href="https://forge.fedoraproject.org/{namespace}/{project}/issues/261">'
-        f"<strong>{namespace}/{project} #42</strong></a>:"
+        f'<p><a href="https://forge.fedoraproject.org/{org}/{project}/issues/261">'
+        f"<strong>{org}/{project} #42</strong></a>:"
         f"<strong>When creating new epel release please include MDAPI</strong></p>\n"
         f"<ul>\n"
         f"<li><strong>Closed</strong> a week ago</li>\n"
@@ -100,13 +100,13 @@ async def test_forge_issue(bot, plugin, respx_mock, command, namespace, project)
 
 
 @pytest.mark.parametrize(
-    "command,namespace,project",
+    "command,org,project",
     [
-        ("forge pr dummy-namespace dummy-project", "dummy-namespace", "dummy-project"),
+        ("forge pr dummy-org dummy-project", "dummy-org", "dummy-project"),
         ("edpr", "epel", "docs"),
     ],
 )
-async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, project):
+async def test_forge_pull_request(bot, plugin, respx_mock, command, org, project):
     user = {
         "html_url": "https://forge.fedoraproject.org/humaton",
         "full_name": "Tomáš Hrčka",
@@ -124,7 +124,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
         "comments": 0,
         "body": "Hi, \r\nafter the epel9 rwas created a",
         "created_at": two_weeks_ago_ts,
-        "html_url": f"https://forge.fedoraproject.org/{namespace}/{project}/pulls/261",
+        "html_url": f"https://forge.fedoraproject.org/{org}/{project}/pulls/261",
         "id": 261,
         "updated_at": two_weeks_ago_ts,
         "milestone": None,
@@ -134,7 +134,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
         "title": "When creating new epel release please include MDAPI",
         "user": user,
     }
-    respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/pulls/42").mock(
+    respx_mock.get(f"http://forge.example.com/api/v1/repos/{org}/{project}/pulls/42").mock(
         return_value=httpx.Response(
             200,
             json=response,
@@ -143,15 +143,15 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
     await bot.send(f"!{command} 42")
     assert len(bot.sent) == 1
     assert bot.sent[0].content.body == (
-        f"**{namespace}/{project} #42** (https://forge.fedoraproject.org/{namespace}/{project}/pulls/261):"
+        f"**{org}/{project} #42** (https://forge.fedoraproject.org/{org}/{project}/pulls/261):"
         f"**When creating new epel release please include MDAPI**\n\n"
         f"● **Opened:** 2 weeks ago by humaton\n"
         f"● **Last Updated:** Never\n"
         f"● **Assignee:** Not Assigned"
     )
     assert bot.sent[0].content.formatted_body == (
-        f'<p><a href="https://forge.fedoraproject.org/{namespace}/{project}/pulls/261">'
-        f"<strong>{namespace}/{project} #42</strong></a>:"
+        f'<p><a href="https://forge.fedoraproject.org/{org}/{project}/pulls/261">'
+        f"<strong>{org}/{project} #42</strong></a>:"
         f"<strong>When creating new epel release please include MDAPI</strong>"
         f"</p>\n<ul>\n"
         f"<li><strong>Opened:</strong> 2 weeks ago by humaton</li>\n"
@@ -164,7 +164,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
     response["state"] = "closed"
     response["updated_at"] = one_week_ago_ts
     response["assignee"] = user
-    respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/pulls/42").mock(
+    respx_mock.get(f"http://forge.example.com/api/v1/repos/{org}/{project}/pulls/42").mock(
         return_value=httpx.Response(
             200,
             json=response,
@@ -173,7 +173,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
     await bot.send(f"!{command} 42")
     assert len(bot.sent) == 2
     assert bot.sent[1].content.body == (
-        f"**{namespace}/{project} #42** (https://forge.fedoraproject.org/{namespace}/{project}/pulls/261):"
+        f"**{org}/{project} #42** (https://forge.fedoraproject.org/{org}/{project}/pulls/261):"
         f"**When creating new epel release please include MDAPI**\n\n"
         f"● **Closed** a week ago\n"
         f"● **Opened:** 2 weeks ago by humaton\n"
@@ -181,8 +181,8 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
         f"● **Assignee:** humaton"
     )
     assert bot.sent[1].content.formatted_body == (
-        f'<p><a href="https://forge.fedoraproject.org/{namespace}/{project}/pulls/261">'
-        f"<strong>{namespace}/{project} #42</strong></a>:"
+        f'<p><a href="https://forge.fedoraproject.org/{org}/{project}/pulls/261">'
+        f"<strong>{org}/{project} #42</strong></a>:"
         f"<strong>When creating new epel release please include MDAPI</strong></p>\n"
         f"<ul>\n"
         f"<li><strong>Closed</strong> a week ago</li>\n"
@@ -195,7 +195,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
     response["merged"] = True
     response["merged_at"] = one_week_ago_ts
     response["merged_by"] = user
-    respx_mock.get(f"http://forge.example.com/api/v1/repos/{namespace}/{project}/pulls/42").mock(
+    respx_mock.get(f"http://forge.example.com/api/v1/repos/{org}/{project}/pulls/42").mock(
         return_value=httpx.Response(
             200,
             json=response,
@@ -204,7 +204,7 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
     await bot.send(f"!{command} 42")
     assert len(bot.sent) == 3
     assert bot.sent[2].content.body == (
-        f"**{namespace}/{project} #42** (https://forge.fedoraproject.org/{namespace}/{project}/pulls/261):"
+        f"**{org}/{project} #42** (https://forge.fedoraproject.org/{org}/{project}/pulls/261):"
         f"**When creating new epel release please include MDAPI**\n\n"
         f"● **Merged** a week ago by humaton\n"
         f"● **Opened:** 2 weeks ago by humaton\n"
@@ -212,8 +212,8 @@ async def test_forge_pull_request(bot, plugin, respx_mock, command, namespace, p
         f"● **Assignee:** humaton"
     )
     assert bot.sent[2].content.formatted_body == (
-        f'<p><a href="https://forge.fedoraproject.org/{namespace}/{project}/pulls/261">'
-        f"<strong>{namespace}/{project} #42</strong></a>:"
+        f'<p><a href="https://forge.fedoraproject.org/{org}/{project}/pulls/261">'
+        f"<strong>{org}/{project} #42</strong></a>:"
         f"<strong>When creating new epel release please include MDAPI</strong></p>\n"
         f"<ul>\n"
         f"<li><strong>Merged</strong> a week ago by humaton</li>\n"
