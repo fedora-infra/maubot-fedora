@@ -15,12 +15,10 @@ class ForgeHandler(Handler):
         super().__init__(plugin)
         self.forgejoclient = ForgejoClient(self.plugin.config["forge_url"])
 
-    async def _get_forge_issue(
-        self, evt: MessageEvent, namespace: str, project: str, issue_id: str
-    ) -> None:
+    async def _get_forge_issue(self, evt: MessageEvent, org: str, repo: str, issue_id: str) -> None:
         await evt.mark_read()
         try:
-            issue = await self.forgejoclient.get_issue(project, issue_id, namespace)
+            issue = await self.forgejoclient.get_issue(repo, issue_id, org)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -34,7 +32,7 @@ class ForgeHandler(Handler):
         created_at = issue.get("created_at")
         user = issue["user"].get("username") if issue.get("user") else None
 
-        response_text = f"[**{namespace}/{project} #{issue_id}**]({html_url}):**{title}**{NL}"
+        response_text = f"[**{org}/{repo} #{issue_id}**]({html_url}):**{title}**{NL}"
         if state == "closed":
             response_text = response_text + (
                 f"* **Closed** {arrow.get(datetime.fromisoformat(closed_at)).humanize()}{NL}"
@@ -61,11 +59,11 @@ class ForgeHandler(Handler):
         )
 
     async def _get_forge_pull_request(
-        self, evt: MessageEvent, namespace: str, project: str, pull_id: str
+        self, evt: MessageEvent, org: str, repo: str, pull_id: str
     ) -> None:
         await evt.mark_read()
         try:
-            pull_request = await self.forgejoclient.get_pull_request(project, pull_id, namespace)
+            pull_request = await self.forgejoclient.get_pull_request(repo, pull_id, org)
         except InfoGatherError as e:
             await evt.respond(e.message)
             return
@@ -86,7 +84,7 @@ class ForgeHandler(Handler):
         created_at = pull_request.get("created_at")
         user = pull_request["user"].get("username") if pull_request.get("user") else None
 
-        response_text = f"[**{namespace}/{project} #{pull_id}**]({html_url}):**{title}**{NL}"
+        response_text = f"[**{org}/{repo} #{pull_id}**]({html_url}):**{title}**{NL}"
         if state == "closed":
             if merged:
                 response_text = response_text + (
@@ -124,41 +122,39 @@ class ForgeHandler(Handler):
     async def forge(self):
         pass
 
-    @forge.subcommand(help="return a forge issue")
-    @command.argument("namespace", required=True)
-    @command.argument("project", required=True)
+    @forge.subcommand(help="return an issue from the forge")
+    @command.argument("org", required=True)
+    @command.argument("repo", required=True)
     @command.argument("issue_id", required=True)
-    async def issue(self, evt: MessageEvent, namespace: str, project: str, issue_id: str) -> None:
+    async def issue(self, evt: MessageEvent, org: str, repo: str, issue_id: str) -> None:
         """
         Show a summary of a Forge issue
 
         #### Arguments ####
 
-        * `namespace`: a namespace in forge
-        * `project`: a project in forge
+        * `org`: an organization in the forge
+        * `repo`: a repository in the organization
         * `issue_id`: the issue number
 
         """
-        await self._get_forge_issue(evt, namespace, project, issue_id)
+        await self._get_forge_issue(evt, org, repo, issue_id)
 
-    @forge.subcommand(name="pr", help="return a forge pull request")
-    @command.argument("namespace", required=True)
-    @command.argument("project", required=True)
-    @command.argument("issue_id", required=True)
-    async def pull_request(
-        self, evt: MessageEvent, namespace: str, project: str, issue_id: str
-    ) -> None:
+    @forge.subcommand(name="pr", help="return a pull request from the forge")
+    @command.argument("org", required=True)
+    @command.argument("repo", required=True)
+    @command.argument("pull_id", required=True)
+    async def pull_request(self, evt: MessageEvent, org: str, repo: str, pull_id: str) -> None:
         """
         Show a summary of a Forge pull request
 
         #### Arguments ####
 
-        * `namespace`: a namespace in forge
-        * `project`: a project in forge
-        * `issue_id`: the pull request number
+        * `org`: an organization in the forge
+        * `repo`: a repository in the organization
+        * `pull_id`: the pull request number
 
         """
-        await self._get_forge_pull_request(evt, namespace, project, issue_id)
+        await self._get_forge_pull_request(evt, org, repo, pull_id)
 
     @command.passive(COMMAND_RE)
     async def aliases(self, evt: MessageEvent, match) -> None:
