@@ -1,3 +1,5 @@
 Add missing parameters in the README for the !forge command
-Replace "namespace" keyword with "org/organization" in the !forge command implementation
+Replace parameter naming in the !forge command to make sense with the forgejo language  
+* Changed "namespace" to "org/organization"
+* Changed "project" to "repo/repository"
 Changed !forge pr subcommand argument name to pull_id
