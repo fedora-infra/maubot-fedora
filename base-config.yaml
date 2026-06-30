@@ -2,10 +2,10 @@ fasjson_url: https://fasjson.fedoraproject.org
 pagureio_url: https://pagure.io
 pagureio_issue_aliases:
   fpc: "packaging-committee"
-  fesco: "fesco"
 forge_url: https://forge.fedoraproject.org
 forge_aliases:
   epel: ["issue", "epel", "steering"]
+  fesco: ["issue", "fesco", "tickets"]
   ticket: ["issue", "infra", "tickets"]
   releng: ["issue", "releng", "tickets"]
 paguredistgit_url: https://src.fedoraproject.org
