@@ -4,7 +4,7 @@ backoff
 fedora-messaging
 httpx
 httpx_gssapi
-maubot
+maubot @ git+https://github.com/gotmax23/maubot@408f61c6b77f0e7c73d3dd1fbbe616cbc7e390d6
 maubot-fedora-messages
 mautrix
 pytz
