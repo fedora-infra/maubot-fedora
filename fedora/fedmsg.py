@@ -29,7 +29,7 @@ def _publish(message: message.Message):
     api.publish(message)
 
 
-_background_tasks = set()
+_background_tasks: set[asyncio.Future] = set()
 
 
 async def publish(message: message.Message):
