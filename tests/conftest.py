@@ -48,6 +48,10 @@ async def plugin(bot, db):
         "fasjson_url": "http://fasjson.example.com",
         "pagureio_url": "http://pagure.example.com",
         "forge_url": "http://forge.example.com",
+        "pagureio_issue_aliases": {
+            # Made up repo name for testing purpuses
+            "repofoo": "repofoo-project"
+        },
         "forge_aliases": {
             "epel": ["issue", "epel", "steering"],
             "edpr": ["pr", "epel", "docs"],
