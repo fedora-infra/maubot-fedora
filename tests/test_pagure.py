@@ -11,8 +11,7 @@ import fedora
     "command,project",
     [
         ("pagureissue dummy-project", "dummy-project"),
-        ("fpc", "packaging-committee"),
-        ("fesco", "fesco"),
+        ("repofoo", "repofoo-project"),
     ],
 )
 async def test_pagureissue(bot, plugin, respx_mock, command, project):
@@ -123,11 +122,11 @@ async def test_issue_notfound(bot, plugin, respx_mock):
 @pytest.mark.parametrize(
     "command,result",
     [
-        ("!fpc", ["packaging-committee", ""]),
-        ("!fpc 1234", ["packaging-committee", "1234"]),
-        ("!fpcd 1234", []),
-        ("a!fpcd 1234", []),
-        ("!fpc 1234 1234", ["packaging-committee", "1234 1234"]),
+        ("!repofoo", ["repofoo-project", ""]),
+        ("!repofoo 1234", ["repofoo-project", "1234"]),
+        ("!repofood 1234", []),
+        ("a!repofood 1234", []),
+        ("!repofoo 1234 1234", ["repofoo-project", "1234 1234"]),
     ],
 )
 async def test_pagureissue_regex(bot, plugin, monkeypatch, command, result):
