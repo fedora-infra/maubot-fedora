@@ -1,5 +1,6 @@
 import logging
 import re
+from urllib.parse import unquote
 
 from maubot import MessageEvent
 from maubot.handlers import command, event
@@ -98,6 +99,7 @@ class CookieHandler(Handler):
         return total, by_release
 
     async def give(self, sender: str, to_user: str) -> str:
+        sender = unquote(sender)
         from_user = await get_fasuser_from_matrix_id(sender, self.plugin.fasjsonclient)
         from_user = from_user["username"]
         if from_user == to_user:
