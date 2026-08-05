@@ -1,4 +1,0 @@
- Previously, giving cookies would fail when using the username++ syntax due to some matrix
- clients url-encoding usernames. This commit adds an a call to urllib.parse.unquote
- to the username processing portion of the cookie.py give() function to ensure that any
- url-encoding in usernames is stripped out before further processing of cookies.

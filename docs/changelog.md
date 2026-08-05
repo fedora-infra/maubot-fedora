@@ -12,6 +12,31 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [0.4.2](https://github.com/fedora-infra/maubot-fedora/tree/0.4.2) - 2026-08-05
+
+
+### Changed
+
+- Switch !fpc command from pagure to forge [#153](https://github.com/fedora-infra/maubot-fedora/issues/153)
+- Update !fesco command alias to account for migration to forgejo [#154](https://github.com/fedora-infra/maubot-fedora/issues/154)
+
+
+### Fixed
+
+- Previously, giving cookies would fail when using the username++ syntax due to some matrix
+   clients url-encoding usernames. This commit adds an a call to urllib.parse.unquote
+   to the username processing portion of the cookie.py give() function to ensure that any
+   url-encoding in usernames is stripped out before further processing of cookies. [#90](https://github.com/fedora-infra/maubot-fedora/issues/90)
+
+
+### Docs
+
+- Add missing parameters in the README for the !forge command
+  Replace parameter naming in the !forge command to make sense with the forgejo language  
+  * Changed "namespace" to "org/organization"
+  * Changed "project" to "repo/repository"
+  Changed !forge pr subcommand argument name to pull_id [#151](https://github.com/fedora-infra/maubot-fedora/issues/151)
+
 ## [0.4.1](https://github.com/fedora-infra/maubot-fedora/tree/0.4.1) - 2026-04-09
 
 
