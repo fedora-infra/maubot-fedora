@@ -74,6 +74,11 @@ directory = "fixed"
 name = "Fixed"
 showcontent = true
 
+[[tool.towncrier.type]]
+directory = "docs"
+name = "Docs"
+showcontent = true
+
 
 [[tool.mypy.overrides]]
 module = [
