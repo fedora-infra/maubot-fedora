@@ -11,9 +11,11 @@ on:
   workflow_dispatch:
 jobs:
   ci:
-    name: CI
+    name: CI (${{ matrix.tox_env }})
     strategy:
       fail-fast: false
+      matrix:
+        tox_env: [py310, py311, black, lint, mypy]
     runs-on: ubuntu-latest
     container: fedorapython/fedora-python-tox:latest
     steps:
@@ -27,4 +29,4 @@ jobs:
           dnf install -y krb5-devel libpq-devel gettext python-tox
 
       - name: execute tox
-        run: tox
+        run: tox -e ${{ matrix.tox_env }}
