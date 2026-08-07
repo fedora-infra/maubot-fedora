@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: CI
+name: Tests & Linting
 on:
   push:
     branches: [main]
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 jobs:
   ci:
-    name: CI (${{ matrix.tox_env }})
+    name: ${{ matrix.tox_env }}
     strategy:
       fail-fast: false
       matrix:
