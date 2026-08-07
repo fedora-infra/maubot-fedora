@@ -52,13 +52,7 @@ complete development environment in the Fedora
 
 3. Commit these changes back to main, and push to the repo on github
 
-4. Tag the new release: `git tag -a v0.4.0 -m"Version 0.4.0"`
-
-5. Push the new tag to github: `git push <remote> v0.4.0`
-
-6. Github actions will create a draft release for you on github.
-   if you are happy with the release notes there, move the release
-   out of draft
+4. Create a new release using the GitHub release UI on the repository
 
 ## Deployment
 
