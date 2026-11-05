@@ -25,6 +25,11 @@ def publish(monkeypatch):
     return mocked_call
 
 
+def _published_bodies(publish):
+    """Map the topic of each published message to its body."""
+    return {call.args[0].topic: call.args[0].body for call in publish.call_args_list}
+
+
 def _mock_bodhi_releases(respx_mock, f38=True, f37=False, f38c=False):
     releases = []
     if f38:
@@ -120,20 +125,29 @@ async def test_cookie_give(bot, plugin, respx_mock, give_command, publish):
         "dummy gave a cookie to foobar. They now have 1 cookie, "
         "1 of which was obtained in the Fedora 38 release cycle"
     )
-    publish.assert_called_once()
-    publish_call = publish.call_args[0]
-    msg = publish_call[0]
-    assert isinstance(msg, message.Message)
-    assert msg.topic == "maubot.cookie.give.v1"
-    assert msg.body["sender"] == "dummy"
-    assert msg.body["recipient"] == "foobar"
-    assert msg.body["total"] == 1
-    assert msg.body == {
+    publish.assert_called()
+    assert [call.args[0].topic for call in publish.call_args_list] == [
+        "maubot.cookie.give.v1",
+        "maubot.cookie.give.v2",
+    ]
+    v1, v2 = (call.args[0] for call in publish.call_args_list)
+    assert isinstance(v1, message.Message)
+    assert v1.body == {
         "sender": "dummy",
         "recipient": "foobar",
         "total": 1,
         "fedora_release": "38",
         "count_by_release": {"38": 1},
+    }
+    assert isinstance(v2, message.Message)
+    assert v2.body == {
+        "sender": "dummy",
+        "recipient": "foobar",
+        "total": 1,
+        "fedora_release": "38",
+        "count_by_release": {"38": 1},
+        "sender_total": 1,
+        "sender_count_by_release": {"38": 1},
     }
 
 
@@ -172,7 +186,7 @@ async def test_cookie_parse(bot, plugin, monkeypatch, respx_mock, body, html, us
         assert give.call_args[0][1] == username
 
 
-async def test_cookie_give_twice(bot, plugin, respx_mock, db):
+async def test_cookie_give_twice(bot, plugin, respx_mock, db, publish):
     _mock_user(respx_mock, "dummy")
     _mock_user(respx_mock, "foobar")
     _mock_bodhi_releases(respx_mock, f38=True)
@@ -186,6 +200,59 @@ async def test_cookie_give_twice(bot, plugin, respx_mock, db):
         bot.sent[0].content.body
         == "dummy has already given cookies to foobar during the F38 timeframe"
     )
+    publish.assert_not_called()
+
+
+async def test_cookie_give_v2_sender_total(bot, plugin, respx_mock, db, publish):
+    _mock_user(respx_mock, "dummy")
+    _mock_user(respx_mock, "foobar")
+    _mock_bodhi_releases(respx_mock, f38=True)
+    # dummy gave one cookie to foobar in an earlier release
+    await db.execute(
+        "INSERT INTO cookies (from_user, to_user, release) VALUES ('dummy', 'foobar', '37')"
+    )
+    await bot.send("foobar++")
+    body = _published_bodies(publish)["maubot.cookie.give.v2"]
+    assert body["sender_total"] == 2
+    assert body["sender_count_by_release"] == {"37": 1, "38": 1}
+    # The recipient's totals keep their v1 meaning: two gifts, one per release
+    assert body["total"] == 2
+    assert body["count_by_release"] == {"37": 1, "38": 1}
+
+
+async def test_cookie_give_v2_ignores_cookies_received(bot, plugin, respx_mock, db, publish):
+    _mock_user(respx_mock, "dummy")
+    _mock_user(respx_mock, "foobar")
+    _mock_bodhi_releases(respx_mock, f38=True)
+    # foobar gave a cookie away; that gift belongs to foobar, not to dummy
+    await db.execute(
+        "INSERT INTO cookies (from_user, to_user, release) VALUES ('foobar', 'dummy', '38')"
+    )
+    await bot.send("foobar++")
+    body = _published_bodies(publish)["maubot.cookie.give.v2"]
+    assert body["sender_total"] == 1
+    assert body["sender_count_by_release"] == {"38": 1}
+
+
+@pytest.mark.parametrize(
+    "given_before,expected_total",
+    [(12, 13), (13, 14), (23, 24), (24, 25), (47, 48), (48, 49), (143, 144), (144, 145)],
+)
+async def test_cookie_give_v2_sender_total_milestones(
+    bot, plugin, respx_mock, db, publish, given_before, expected_total
+):
+    _mock_user(respx_mock, "dummy")
+    _mock_user(respx_mock, "foobar")
+    _mock_bodhi_releases(respx_mock, f38=True)
+    for i in range(given_before):
+        await db.execute(
+            "INSERT INTO cookies (from_user, to_user, release) VALUES ('dummy', $1, '37')",
+            f"recipient{i}",
+        )
+    await bot.send("foobar++")
+    body = _published_bodies(publish)["maubot.cookie.give.v2"]
+    assert body["sender_total"] == expected_total
+    assert body["sender_count_by_release"] == {"37": given_before, "38": 1}
 
 
 async def test_cookie_give_myself(bot, plugin, respx_mock, db):
@@ -242,7 +309,10 @@ async def test_cookie_react(bot, plugin, respx_mock, emoji, publish):
             "dummy gave a cookie to foobar. They now have 1 cookie, "
             "1 of which was obtained in the Fedora 38 release cycle"
         )
-        publish.assert_called_once()
+        assert [call.args[0].topic for call in publish.call_args_list] == [
+            "maubot.cookie.give.v1",
+            "maubot.cookie.give.v2",
+        ]
     else:
         assert len(bot.sent) == 0
 
