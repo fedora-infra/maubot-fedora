@@ -1,0 +1,4 @@
+Publish a `maubot.cookie.give.v2` message alongside v1, adding the sender's total
+cookie count (`sender_total` and `sender_count_by_release`) to the body. The v1
+message is unchanged, so existing consumers keep working. Consumers can use the new
+fields to count cookies given away, which the Baker badges need.
