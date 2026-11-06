@@ -24,6 +24,23 @@ COOKIE_HTML_RE = re.compile(
 )
 COOKIE_EMOJI = "🍪"
 
+RECEIVED_TOTAL_DBQ = "SELECT SUM(value) FROM cookies WHERE to_user = $1"
+RECEIVED_COUNTS_BY_RELEASE_DBQ = (
+    "SELECT release, SUM(value) AS count "
+    "FROM cookies "
+    "WHERE to_user = $1 "
+    "GROUP BY release "
+    "ORDER BY release"
+)
+GIVEN_TOTAL_DBQ = "SELECT SUM(value) FROM cookies WHERE from_user = $1"
+GIVEN_COUNTS_BY_RELEASE_DBQ = (
+    "SELECT release, SUM(value) AS count "
+    "FROM cookies "
+    "WHERE from_user = $1 "
+    "GROUP BY release "
+    "ORDER BY release"
+)
+
 
 class CookieHandler(Handler):
     def __init__(self, plugin):
@@ -80,23 +97,20 @@ class CookieHandler(Handler):
             return None
         return match.group(1)
 
-    async def _get_cookie_totals(self, username):
-        dbq = "SELECT SUM(value) FROM cookies WHERE to_user = $1"
-        total = await self.plugin.database.fetchval(dbq, username)
+    async def _get_totals(self, total_dbq, counts_by_release_dbq, username):
+        total = await self.plugin.database.fetchval(total_dbq, username)
         by_release = {}
-
-        dbq = (
-            "SELECT release, SUM(value) AS count "
-            "FROM cookies "
-            "WHERE to_user = $1 "
-            "GROUP BY release "
-            "ORDER BY release"
-        )
-        release_totals = await self.plugin.database.fetch(dbq, username)
+        release_totals = await self.plugin.database.fetch(counts_by_release_dbq, username)
         for row in release_totals:
             by_release[row["release"]] = row["count"]
 
         return total, by_release
+
+    async def _get_cookie_totals(self, username):
+        return await self._get_totals(RECEIVED_TOTAL_DBQ, RECEIVED_COUNTS_BY_RELEASE_DBQ, username)
+
+    async def _get_given_cookie_totals(self, username):
+        return await self._get_totals(GIVEN_TOTAL_DBQ, GIVEN_COUNTS_BY_RELEASE_DBQ, username)
 
     async def give(self, sender: str, to_user: str) -> str:
         sender = unquote(sender)
@@ -123,16 +137,22 @@ class CookieHandler(Handler):
                 f"F{current_release} timeframe"
             )
         total, by_release = await self._get_cookie_totals(to_user)
-        fm = GiveCookieV1(
-            body={
-                "sender": from_user,
-                "recipient": to_user,
-                "total": total,
-                "fedora_release": current_release,
-                "count_by_release": by_release,
-            }
+        sender_total, sender_by_release = await self._get_given_cookie_totals(from_user)
+        # ``total`` and ``count_by_release`` describe the recipient, while the
+        # sender totals let consumers count cookies given away.
+        await publish(
+            GiveCookieV1(
+                body={
+                    "sender": from_user,
+                    "recipient": to_user,
+                    "total": total,
+                    "fedora_release": current_release,
+                    "count_by_release": by_release,
+                    "sender_total": sender_total,
+                    "sender_count_by_release": sender_by_release,
+                }
+            )
         )
-        await publish(fm)
         return (
             f"{from_user} gave a cookie to {to_user}. They now "
             f"have {total} cookie{'' if total==1 else 's'}, {by_release[current_release]} "

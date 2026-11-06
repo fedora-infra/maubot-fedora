@@ -5,6 +5,6 @@ fedora-messaging
 httpx
 httpx_gssapi
 maubot @ git+https://github.com/gotmax23/maubot@408f61c6b77f0e7c73d3dd1fbbe616cbc7e390d6
-maubot-fedora-messages
+maubot-fedora-messages>=0.2.0
 mautrix
 pytz
