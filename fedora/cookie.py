@@ -4,7 +4,7 @@ from urllib.parse import unquote
 
 from maubot import MessageEvent
 from maubot.handlers import command, event
-from maubot_fedora_messages import GiveCookieV1, GiveCookieV2
+from maubot_fedora_messages import GiveCookieV1
 from mautrix.types import EventType
 
 from .clients.bodhi import BodhiClient
@@ -138,21 +138,16 @@ class CookieHandler(Handler):
             )
         total, by_release = await self._get_cookie_totals(to_user)
         sender_total, sender_by_release = await self._get_given_cookie_totals(from_user)
-        body = {
-            "sender": from_user,
-            "recipient": to_user,
-            "total": total,
-            "fedora_release": current_release,
-            "count_by_release": by_release,
-        }
-        # v1 keeps its original meaning (the recipient's totals) for the existing
-        # "cookies received" badges. v2 adds the sender's totals so that badges can
-        # count how many cookies a person has given away.
-        await publish(GiveCookieV1(body=body))
+        # ``total`` and ``count_by_release`` describe the recipient, while the
+        # sender totals let consumers count cookies given away.
         await publish(
-            GiveCookieV2(
+            GiveCookieV1(
                 body={
-                    **body,
+                    "sender": from_user,
+                    "recipient": to_user,
+                    "total": total,
+                    "fedora_release": current_release,
+                    "count_by_release": by_release,
                     "sender_total": sender_total,
                     "sender_count_by_release": sender_by_release,
                 }

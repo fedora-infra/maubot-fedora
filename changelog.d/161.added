@@ -1,0 +1,5 @@
+Publish the sender's cookie totals in the `maubot.cookie.give.v1` message. The
+body now includes `sender_total` and `sender_count_by_release` alongside the
+recipient's existing `total` and `count_by_release`, so consumers can count
+cookies given away without changing how cookies received are counted. Older
+messages that lack the new optional fields still validate.
